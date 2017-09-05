@@ -17,7 +17,7 @@ import videoReader as VR
 
 
 class VideoLabel(object):
-    def __init__(self, videoDir, imageDir, labelName):
+    def __init__(self, videoDir, imageDir, labelName, outputDir):
         self.videoDir = videoDir
         self.imageDir = imageDir
         self.frame = None
@@ -210,7 +210,7 @@ class VideoLabel(object):
         if imgNum > 10:
             return
         for name in os.listdir(self.videoDir):
-            videoName = os.path.join(videoDir, name)
+            videoName = os.path.join(self.videoDir, name)
             cmd = "ffmpeg -i " + videoName + " -q:v 2 -f image2 " + \
                     imageDir + '/' + name + "_%06d.png"
             # print cmd
@@ -571,6 +571,7 @@ if __name__ == '__main__':
     '''settings'''
     sample_factor = 3 #
     mini_batch_size = 12 #
+
     '''settings'''
 
     vr = VR.VideoReader(sample_factor=sample_factor, mini_batch_size=mini_batch_size)

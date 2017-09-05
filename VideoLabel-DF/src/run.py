@@ -1,43 +1,36 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import cv2
 
-# Define the codec and create VideoWriter object
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.mp4',fourcc, 29.0, (1280,720))
+import os
+import sys
 
-cap = cv2.VideoCapture('VID_20170901_171941.mp4')
-while(cap.isOpened()):
-    ret, frame = cap.read()
-    if ret==True:
-        frame = cv2.flip(frame,0)
+import videoReader as VR
+import videoLabel as VL
 
-        # write the flipped frame
-        out.write(frame)
 
-        cv2.imshow('frame',frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    else:
-        break
-cap.release()
+videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos' # 视频文件夹地址
+imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images' # 不用设置
+outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs' # images和xmls输出地址
+labelName = r'.\labels.txt'
 
-cap = cv2.VideoCapture('VID_20170901_171958.mp4')
-while(cap.isOpened()):
-    ret, frame = cap.read()
-    if ret==True:
-        frame = cv2.flip(frame,0)
+'''settings'''
+sample_factor = 6  # 每6帧抽取一帧
+mini_batch_size = 12  # 每次载入的帧数
+'''settings'''
 
-        # write the flipped frame
-        out.write(frame)
+vr = VR.VideoReader(sample_factor=sample_factor, mini_batch_size=mini_batch_size)
 
-        cv2.imshow('frame',frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    else:
-        break
-cap.release()
+videoList = os.listdir(videoDir)
+for video in videoList:
+    videoPath = os.path.join(videoDir, video)
+    for batch, frameList in enumerate(vr.read(videoPath=videoPath)):
+        vl = VL.VideoLabel(videoDir, imageDir, labelName, outputDir)
+        vl.length = 5
+        vl.mini_batch_size = mini_batch_size
+        vl.video = video  ###
+        vl.frameList = frameList  ###
 
-# Release everything if job is finished
-
-out.release()
-cv2.destroyAllWindows()
+        vl.update_outputDir(video)
+        vl.labelling(batch)
