@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np 
+import cv2 
+
 class Rect(object):
     '''
     Rectagle
@@ -40,3 +43,20 @@ class WorkFrame(object):
     def label(self):
         '''keyboard'''
         pass
+
+class FrameFlow(object): 
+    def __init__(self): 
+        self.wkFrames = None
+        self.curFrame = None
+
+        self.rightClick = 0
+    
+    def draw_rect(self, event, x, y, flags, params): 
+        if self.rightClick == 0: 
+            if event == cv2.EVENT_MOUSEMOVE:
+                print(x,y)
+    
+    def label(self):
+        cv2.namedWindow('image')
+        cv2.setMouseCallback("image", self.draw_rect)
+        cv2.destroyAllWindows()

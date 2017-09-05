@@ -10,9 +10,9 @@ import videoReader as VR
 import videoLabel as VL
 
 
-videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos' # 视频文件夹地址
-imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images' # 不用设置
-outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs' # images和xmls输出地址
+videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
+imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
+outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
 labelName = r'.\labels.txt'
 
 '''settings'''

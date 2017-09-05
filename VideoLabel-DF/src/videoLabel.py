@@ -68,6 +68,7 @@ class VideoLabel(object):
         
         self.storename = []    # 用于按键A倒退、按键D前进的相关设置
         self.storerects = []    # Store rects of each frame
+        self.storeclses = []
 
         ''''''
         self.video = ""
@@ -156,6 +157,12 @@ class VideoLabel(object):
         self.frame = copy.deepcopy(self.frameList[idx])
         self.bufframe = copy.deepcopy(self.frame)
         self.shape = self.frame.shape
+
+        ''''''
+        if len(self.storeclses) > 0:
+            self.classes = copy.deepcopy(self.storeclses[idx])
+        ''''''
+
         return name, self.frame, self.bufframe, self.shape
 
     def update_storerects(self, rects0, rects1, idx_f):
@@ -210,7 +217,7 @@ class VideoLabel(object):
         if imgNum > 10:
             return
         for name in os.listdir(self.videoDir):
-            videoName = os.path.join(self.videoDir, name)
+            videoName = os.path.join(videoDir, name)
             cmd = "ffmpeg -i " + videoName + " -q:v 2 -f image2 " + \
                     imageDir + '/' + name + "_%06d.png"
             # print cmd
@@ -468,8 +475,8 @@ class VideoLabel(object):
                     self.update_frame()
                     
                     '''bug bug bug'''
-                    # if self.storerects:
-                    #     self.storerects[cur_idx][self.chooseRect] = key
+                    if len(self.storeclses) > 0:
+                        self.storeclses[cur_idx] = copy.deepcopy(self.classes)
                     '''bug bug bug'''
 
             if key == 102:
@@ -489,6 +496,11 @@ class VideoLabel(object):
                 for idx in range(idx_itv[0], idx_itv[1]):
                     rects = copy.deepcopy(self.rects)
                     self.storerects.append(rects)
+
+                    ''''''
+                    clses = copy.deepcopy(self.classes)
+                    self.storeclses.append(clses)
+                    ''''''
 
                     name, self.frame, self.bufframe, self.shape = self.update(idx)
                     # self.draw_static(name, self.frame, self.shape, key, self.rects)
@@ -563,15 +575,14 @@ class VideoLabel(object):
 
 
 if __name__ == '__main__':
-    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'
-    imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'
-    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'
+    videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
+    imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images'  # 不用设置
+    outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
     labelName = r'.\labels.txt'
 
     '''settings'''
-    sample_factor = 3 #
-    mini_batch_size = 12 #
-
+    sample_factor = 6  # 每6帧抽取一帧
+    mini_batch_size = 12  # 每次载入的帧数
     '''settings'''
 
     vr = VR.VideoReader(sample_factor=sample_factor, mini_batch_size=mini_batch_size)
@@ -580,11 +591,11 @@ if __name__ == '__main__':
     for video in videoList:
         videoPath = os.path.join(videoDir, video)
         for batch, frameList in enumerate(vr.read(videoPath=videoPath)):
-            vl = VideoLabel(videoDir, imageDir, labelName)
+            vl = VideoLabel(videoDir, imageDir, labelName, outputDir)
             vl.length = 5
             vl.mini_batch_size = mini_batch_size
-            vl.video = video ###
-            vl.frameList = frameList ###
+            vl.video = video  ###
+            vl.frameList = frameList  ###
 
             vl.update_outputDir(video)
             vl.labelling(batch)
