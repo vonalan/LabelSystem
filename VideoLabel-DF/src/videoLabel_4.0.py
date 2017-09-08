@@ -55,7 +55,7 @@ class VideoLabel(object):
         self.colorList = []
         self.labelHight = 20
         self.labelWidth = 0
-        self.extractFrames()
+        # self.extractFrames()
         self.parseLabel(labelName)
         self.rightClick = 0    # ???
 
@@ -212,16 +212,16 @@ class VideoLabel(object):
         infile.close()
         self.labelWidth = self.maxLabel * 10
 
-    def extractFrames(self):
-        imgNum = len(os.listdir(self.imageDir))
-        if imgNum > 10:
-            return
-        for name in os.listdir(self.videoDir):
-            videoName = os.path.join(videoDir, name)
-            cmd = "ffmpeg -i " + videoName + " -q:v 2 -f image2 " + \
-                    imageDir + '/' + name + "_%06d.png"
-            # print cmd
-            os.system(cmd)
+    # def extractFrames(self):
+    #     imgNum = len(os.listdir(self.imageDir))
+    #     if imgNum > 10:
+    #         return
+    #     for name in os.listdir(self.videoDir):
+    #         videoName = os.path.join(videoDir, name)
+    #         cmd = "ffmpeg -i " + videoName + " -q:v 2 -f image2 " + \
+    #                 imageDir + '/' + name + "_%06d.png"
+    #         # print cmd
+    #         os.system(cmd)
 
     def draw_circle(self, event,x,y,flags,param):
         if event==cv2.EVENT_LBUTTONDOWN:
@@ -391,14 +391,14 @@ class VideoLabel(object):
                     # self.update_boxImg()
 
                     '''update the last rects of storerects'''
-                    if self.storerects:
+                    if self.storerects and self.dr == True:
                         self.storerects[-1] = copy.deepcopy(self.rects)
-                        print 'Moving... '
+                        # print 'Moving... '
                         # print self.storerects[0],
                         # print '-->',
                         # print self.storerects[-1]
                         # print '...',
-                        print 'Done! '
+                        # print 'Done! '
                     '''update the last rects of storerects'''
 
             elif event == cv2.EVENT_MOUSEMOVE:
@@ -479,38 +479,41 @@ class VideoLabel(object):
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
                     '''bug bug bug'''
 
-            if key == 102:
+            # if key == 102:
+            if key == ord('f'):
                 # 'f', 调到下30帧
-                if idx_itv[1] == numFrames and self.dr == False:
-                    break
+                if self.dr == False and len(self.rects) == len(self.classes):
+                    if idx_itv[1] == numFrames:
+                        break
 
-                self.dr = True
-                self.fc = True
+                    self.dr = True
+                    self.fc = True
 
-                '''flag = self.numFrames%self.length'''
-                idx_itv = [idx + self.length for idx in idx_itv] # index interval: [idx, idx + self.length)
-                if idx_itv[1] > numFrames: idx_itv[1] = numFrames
-                # print idx_itv
+                    '''flag = self.numFrames%self.length'''
+                    idx_itv = [idx + self.length for idx in idx_itv] # index interval: [idx, idx + self.length)
+                    if idx_itv[1] > numFrames: idx_itv[1] = numFrames
+                    # print idx_itv
 
-                print 'Skipping to next %d frame...'%(self.length),
-                for idx in range(idx_itv[0], idx_itv[1]):
-                    rects = copy.deepcopy(self.rects)
-                    self.storerects.append(rects)
+                    # print 'Skipping to next %d frame...'%(self.length),
+                    for idx in range(idx_itv[0], idx_itv[1]):
+                        rects = copy.deepcopy(self.rects)
+                        self.storerects.append(rects)
 
-                    ''''''
-                    clses = copy.deepcopy(self.classes)
-                    self.storeclses.append(clses)
-                    ''''''
+                        ''''''
+                        clses = copy.deepcopy(self.classes)
+                        self.storeclses.append(clses)
+                        ''''''
 
-                    name, self.frame, self.bufframe, self.shape = self.update(idx)
-                    # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        name, self.frame, self.bufframe, self.shape = self.update(idx)
+                        # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        self.update_frame()
+
+                        self.writeLog(str(name) + ' , ' + chr(key))
+                        print('F -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], name))
+                    # print 'Done! '
+
                     self.update_frame()
-
-                    self.writeLog(str(name) + ' , ' + chr(key))
-                print 'Done! '
-
-                self.update_frame()
-                cur_idx = idx_itv[1] - 1
+                    cur_idx = idx_itv[1] - 1
 
             if key == 100:
                 # 'd', 进入下一张图片
@@ -530,9 +533,9 @@ class VideoLabel(object):
                 # 'a', 返回上一张图片
                 if self.fc == True and cur_idx - 1 > idx_itv[0]-1:
                     if self.dr == True:
-                        print 'Interpolating...',
+                        # print 'Interpolating...',
                         self.update_storerects(self.storerects[idx_itv[0]], self.storerects[idx_itv[1]-1], idx_itv[1])
-                        print 'Done! '
+                        # print 'Done! '
                         
                         for idx in range(idx_itv[0], idx_itv[1]):
                             self.rects = self.storerects[idx]
@@ -575,27 +578,49 @@ class VideoLabel(object):
 
 
 if __name__ == '__main__':
-    videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
-    imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images'  # 不用设置
-    outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
+    # videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
+    # imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
+    # outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
+    # labelName = r'.\labels.txt'
+
+
+    videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos' # 视频文件夹地址
+    imageDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\images' # 不用设置
+    outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs' # images和xmls输出地址
     labelName = r'.\labels.txt'
+
 
     '''settings'''
     sample_factor = 6  # 每6帧抽取一帧
-    mini_batch_size = 12  # 每次载入的帧数
+    mini_batch_size = 300  # 每次载入的帧数
     '''settings'''
 
     vr = VR.VideoReader(sample_factor=sample_factor, mini_batch_size=mini_batch_size)
-
+    
     videoList = os.listdir(videoDir)
     for video in videoList:
         videoPath = os.path.join(videoDir, video)
         for batch, frameList in enumerate(vr.read(videoPath=videoPath)):
             vl = VideoLabel(videoDir, imageDir, labelName, outputDir)
-            # vl.length = 5
+            vl.linethick = 1
+            vl.lineHighThick = 3
+            vl.length = 30 # 选择F键要跳转的帧数，debug使用
             vl.mini_batch_size = mini_batch_size
             vl.video = video  ###
             vl.frameList = frameList  ###
 
             vl.update_outputDir(video)
             vl.labelling(batch)
+    '''
+    1. 画框前定位，需要加横竖两条辅助线。
+    2. update_storerects之后调到第一帧。
+    3. update_storerects需要同步更新最后一帧（最后一帧出现了问题）以及每帧边框的大小。
+    4. 边框3像素改成1像素
+    5. "q"退出
+    6. "a"键和"f"键相互控制
+    
+    5. 空白键切换激活的Rect
+    6. 方向键移动边
+    7. 工作日志记录
+    8. 边框图片边缘溢出
+    '''

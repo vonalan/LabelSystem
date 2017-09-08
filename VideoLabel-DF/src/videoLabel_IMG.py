@@ -179,6 +179,23 @@ class VideoLabel(object):
                 curRects.append([list(rect_arr[0]), list(rect_arr[1])])
             self.storerects.append(curRects)
 
+    def flush_storerects_2(self, op_queue=None):
+        '''
+                将self.storerects从内存写如磁盘。
+                op_queue: operation_queue，用于一次性将所有operation写入磁盘
+                :return: None
+                '''
+
+        '''DBG'''
+        op_queue = {'name': ['a', 'a', 'f', 'f']}
+        key = op_queue['name'][0]
+        '''DBG'''
+
+        for idx in range(len(self.storerects)):
+            rects = self.storerects[idx]
+            name, self.frame, self.bufframe, self.shape = self.update(idx)
+            self.draw_static(name, self.frame, self.shape, key, rects)
+
     def flush_storerects(self, op_queue=None):
         '''
         将self.storerects从内存写如磁盘。
@@ -472,16 +489,13 @@ class VideoLabel(object):
     def labelling(self):
         import time
 
-        # existname = [xml[:-4] + '.png' for xml in os.listdir(self.outputxmls)]
-        # storename = os.listdir(self.outputimages)
-        # self.storename = [img for img in storename if img not in existname]
-
-        self.storename = os.listdir(self.outputimages)
+        existname = [xml[:-4] + '.png' for xml in os.listdir(self.outputxmls)]
+        storename = os.listdir(self.outputimages)
+        self.storename = [img for img in storename if img not in existname]
         self.storename = sorted(self.storename, key = lambda x : int((x.split('.')[1]).split('_')[1]))
         numFrames = len(self.storename)
 
-        idx_itv = [-self.length, 0]
-
+        idx_itv = [0,self.length]
         cur_idx = 0
         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
 
@@ -507,14 +521,21 @@ class VideoLabel(object):
             if key == ord('f'):
                 # 'f', 调到下30帧
                 if self.dr == False and len(self.rects) == len(self.classes):
-                    if idx_itv[1] == numFrames:
+                    if self.storerects:
+                        numFrames -= len(self.storerects)
+                        self.flush_storerects_2()
+                        self.storename = self.storename[29:]
+                        self.
+                        self.storerects = []
+
+                    if numFrames == 0:
                         break
 
                     self.dr = True
                     self.fc = True
 
                     '''flag = self.numFrames%self.length'''
-                    idx_itv = [idx + self.length for idx in idx_itv]  # index interval: [idx, idx + self.length)
+                    # idx_itv = [idx + self.length for idx in idx_itv]  # index interval: [idx, idx + self.length)
                     if idx_itv[1] > numFrames: idx_itv[1] = numFrames
                     # print idx_itv
 
@@ -586,7 +607,8 @@ class VideoLabel(object):
             #     break
 
         cv2.destroyAllWindows()
-        self.flush_storerects()
+
+        self.writeLog(self.video)
         time.sleep(1)
 
     def update_outputDir(self, video):
@@ -607,9 +629,14 @@ if __name__ == '__main__':
     # outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
     # labelName = r'.\labels.txt'
 
-    videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos'  # 视频文件夹地址
+    # videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos'  # 视频文件夹地址
+    # imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
+    # outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs'  # images和xmls输出地址
+    # labelName = r'.\labels.txt'
+
+    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'  # 视频文件夹地址
     imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
-    outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs'  # images和xmls输出地址
+    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'  # images和xmls输出地址
     labelName = r'.\labels.txt'
 
     '''settings'''

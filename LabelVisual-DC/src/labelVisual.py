@@ -293,8 +293,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs\xmls'
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs\1f59d490393c040882eba20199a3a0a8.mp4\imgs'
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs\1f59d490393c040882eba20199a3a0a8.mp4\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'

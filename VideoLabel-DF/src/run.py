@@ -10,10 +10,17 @@ import videoReader as VR
 import videoLabel as VL
 
 
-videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
-imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
-outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
+# videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
+# imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
+# outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
+# labelName = r'.\labels.txt'
+
+
+videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos' # 视频文件夹地址
+imageDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\images' # 不用设置
+outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs' # images和xmls输出地址
 labelName = r'.\labels.txt'
+
 
 '''settings'''
 sample_factor = 6  # 每6帧抽取一帧
@@ -27,7 +34,7 @@ for video in videoList:
     videoPath = os.path.join(videoDir, video)
     for batch, frameList in enumerate(vr.read(videoPath=videoPath)):
         vl = VL.VideoLabel(videoDir, imageDir, labelName, outputDir)
-        vl.length = 5
+        vl.length = 5 # 选择F键要跳转的帧数，debug使用
         vl.mini_batch_size = mini_batch_size
         vl.video = video  ###
         vl.frameList = frameList  ###
