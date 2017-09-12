@@ -67,12 +67,12 @@ class VideoLabel(object):
                     self.DC = 0 
                     print("F -- Duplication. ")
             if key == ord('a'): 
-                if self.FC == 1: 
-                    self.AC = 1
+                if self.FC == 1:
                     if self.UC == 1: 
                         self.UC = 0 
                         print("A -- Interpolation. ")
-                    else: 
+                    else:
+                        self.AC = 1
                         print('A -- Last. ')                       
             if key == ord('d'): 
                 if self.FC == 1 and self.AC == 1: 
