@@ -12,9 +12,6 @@ import random
 import matplotlib.pyplot as plt
 from collections import deque
 
-import videoReader as VR
-
-
 class VideoLabel(object):
     def __init__(self, videoDir, imageDir, labelName, outputDir):
         self.videoDir = videoDir
@@ -65,11 +62,6 @@ class VideoLabel(object):
         self.storerects = []  # Store rects of each frame
         self.storeclses = []
 
-        ''''''
-        self.video = ""
-        self.frameList = []
-        ''''''
-
         self.prefix_template = r'./template_prefix.xml'  # 这两个是输出xml的相关设置
         self.object_template = r'./template_object.xml'
 
@@ -84,6 +76,7 @@ class VideoLabel(object):
         self.rectsCopy = None
         self.dr = False
         self.fc = False
+        self.video = ''
 
     # 输出xml方法，
     def writeXML(self, imgsize, names, boxes, outname):
@@ -115,18 +108,6 @@ class VideoLabel(object):
         log = open(self.record, 'a')
         log.write(strings + '\n')
         log.close()
-
-    # 更新目标文件夹
-    def update_outputDir(self, video):
-        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
-        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
-        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
-        self.log = os.path.join(self.outputDir, video, 'output.log')
-        self.record = os.path.join(self.outputDir, video, 'record.log')
-
-        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
-        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
-        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
 
     # 输出日志文件
     def writeLog(self, strings):
@@ -163,7 +144,7 @@ class VideoLabel(object):
 
         '''需要一次性将全部日志写入时，配合op_queue使用'''
         # self.writeLog(name + ' , ' + chr(key))
-        # self.writeRecord(name)
+        self.writeRecord(name)
 
     # 因为有后退、后退30张、前进操作，每次操作都要更新name,frame,bufframe,shape
     def update(self, idx):
@@ -180,9 +161,10 @@ class VideoLabel(object):
 
         return name, self.frame, self.bufframe, self.shape
 
-    def update_storerects(self, rects0, rects1, idx_f):
-        self.storerects = self.storerects[:idx_f - self.length]
-        for i in range(idx_f):
+    def update_storerects(self, rects0, rects1, numFrames):
+        # self.storerects = self.storerects[:idx_f - self.length]
+        self.storerects = []
+        for i in range(numFrames):
             curRects = []
             for j in range(len(rects0)):
                 rect0, rect1 = np.array(rects0[j]), np.array(rects1[j])
@@ -202,9 +184,6 @@ class VideoLabel(object):
         op_queue = {'name': ['a', 'a', 'f', 'f']}
         key = op_queue['name'][0]
         '''DBG'''
-        #
-        # print len(self.storerects)
-        # print len(self.storename)
 
         for idx in range(len(self.storerects)):
             rects = self.storerects[idx]
@@ -280,12 +259,12 @@ class VideoLabel(object):
         self.boxImg = np.zeros((self.shape[0], self.shape[1])) - 1
         th = self.thick
         for i, pts in enumerate(self.rects):
-            self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3  ###
+            self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3
             # [y1:y2,x1:x2]
             points = [pts[0], pts[1], [pts[0][0], pts[1][1]], [pts[1][0], pts[0][1]]]
             # [[x1,y1],[x2,y2],[x1,y2],[x2,y1]] = [左上，右下、左下、右上]
             for p in points:
-                self.boxImg[p[1] - th: p[1] + th, p[0] - th: p[0] + th] = i * 3 + 1  ###
+                self.boxImg[p[1] - th: p[1] + th, p[0] - th: p[0] + th] = i * 3 + 1
 
     def show_labels(self, x, y):
         for i, name in enumerate(self.labels):
@@ -369,8 +348,6 @@ class VideoLabel(object):
             num = int(self.boxImg[y, x])
         if num >= 0:
             self.frame = copy.copy(self.bufframe)
-
-            '''边框选择机制'''
             idx = int(num / 3)
             self.chooseRect = idx
             self.chooseType = num % 3
@@ -509,10 +486,10 @@ class VideoLabel(object):
         existname = [xml[:-4] + '.png' for xml in os.listdir(self.outputxmls)]
         storename = os.listdir(self.outputimages)
         self.storename = [img for img in storename if img not in existname]
-        self.storename = sorted(self.storename, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        self.storename = sorted(self.storename, key = lambda x : int((x.split('.')[1]).split('_')[1]))
         numFrames = len(self.storename)
 
-        idx_itv = [0, self.length]
+        idx_itv = [0,self.length]
         cur_idx = 0
         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
 
@@ -534,22 +511,16 @@ class VideoLabel(object):
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
                     '''bug bug bug'''
 
-            if key == ord('l'):
-            # if key == 102:
-                '''不要轻易按下F键'''
+            if key == 102:
+            # if key == ord('f'):
                 # 'f', 调到下30帧
-
-                # flag = raw_input('F?!!')
-                # if flag == True:
-                #     pass
-
                 if self.dr == False and len(self.rects) == len(self.classes):
                     if self.storerects:
-                        self.flush_storerects_2()
                         numFrames -= len(self.storerects)
-                        self.storename = self.storename[numFrames-1:]
-                        self.storeclses = []
+                        self.flush_storerects_2()
                         self.storerects = []
+                        self.storeclses = []
+                        self.storename = self.storename[self.length:]
 
                     if numFrames == 0:
                         break
@@ -625,21 +596,32 @@ class VideoLabel(object):
                         self.writeLog(str(name) + ' , ' + chr(key))
                         # self.update_frame()
 
-                        # if key == 113:
-                        #     # 'q'，退出
-                        #     break
+            # if key == 113:
+            #     # 'q'，退出
+            #     break
 
         cv2.destroyAllWindows()
-        self.writeRecord(self.video)
+        self.writeLog(self.video)
         time.sleep(1)
+
+    def update_outputDir(self, video):
+        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
+        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
+        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
+        self.log = os.path.join(self.outputDir, video, 'output.log')
+        self.record = os.path.join(self.outputDir, video, 'record.log')
+
+        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
+        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
+        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
 
 
 if __name__ == '__main__':
-    videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu\videos'  # 视频文件夹地址
-    imageDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu\images'  # 不用设置
-    outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu\outputs'  # images和xmls输出地址
-    labelName = r'.\labels.txt'
-
+    videoDir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
+    imageDir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\images' # 不用设置
+    outputDir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
+    labelName = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\backups\labels.txt' # 标签域
+    
     '''settings'''
     sample_factor = 6  # 每6帧抽取一帧
     '''settings'''
@@ -658,7 +640,7 @@ if __name__ == '__main__':
             continue
 
         vl.video = video
-        # vl.extractFrames(factor=sample_factor)
+        vl.extractFrames(factor=sample_factor)
 
         vl.linethick = 1
         vl.lineHighThick = 3
@@ -666,17 +648,4 @@ if __name__ == '__main__':
 
         vl.labelling()
 
-    '''
-    1. 画框前定位，需要加横竖两条辅助线。
-    2. update_storerects之后调到第一帧。
-    3. update_storerects需要同步更新最后一帧（最后一帧出现了问题）以及每帧边框的大小。
-    4. 边框3像素改成1像素
-    5. "q"退出
-    6. "a"键和"f"键相互控制
-    7. "f"误触
-
-    5. 空白键切换激活的Rect
-    6. 方向键移动边
-    7. 工作日志记录
-    8. 边框图片边缘溢出
-    '''
+        print '\n'
