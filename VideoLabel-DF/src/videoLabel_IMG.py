@@ -115,6 +115,18 @@ class VideoLabel(object):
         log = open(self.record, 'a')
         log.write(strings + '\n')
         log.close()
+    
+    # 更新目标文件夹
+    def update_outputDir(self, video):
+        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
+        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
+        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
+        self.log = os.path.join(self.outputDir, video, 'output.log')
+        self.record = os.path.join(self.outputDir, video, 'record.log')
+        
+        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
+        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
+        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
 
     # 输出日志文件
     def writeLog(self, strings):
@@ -151,7 +163,7 @@ class VideoLabel(object):
 
         '''需要一次性将全部日志写入时，配合op_queue使用'''
         # self.writeLog(name + ' , ' + chr(key))
-        self.writeRecord(name)
+        # self.writeRecord(name)
 
     # 因为有后退、后退30张、前进操作，每次操作都要更新name,frame,bufframe,shape
     def update(self, idx):
@@ -161,12 +173,24 @@ class VideoLabel(object):
         self.bufframe = copy.deepcopy(self.frame)
         self.shape = self.frame.shape
 
-        ''''''
         if len(self.storeclses) > 0:
             self.classes = copy.deepcopy(self.storeclses[idx])
         ''''''
 
         return name, self.frame, self.bufframe, self.shape
+
+    def update_storerects_2(self):
+        rects0, rects1 = self.storerects[0], self.storerects[-1]
+
+        self.storerects = []
+        for i in range(self.length):
+            curRects = []
+            for j in range(len(rects0)):
+                rect0, rect1 = np.array(rects0[j]), np.array(rects1[j])
+                rect_gap = (rect1 - rect0) / float(self.length)
+                rect_arr = (rect0 + rect_gap * i).astype('int32')
+                curRects.append([list(rect_arr[0]), list(rect_arr[1])])
+            self.storerects.append(curRects)
 
     def update_storerects(self, rects0, rects1, idx_f):
         self.storerects = self.storerects[:idx_f - self.length]
@@ -265,12 +289,12 @@ class VideoLabel(object):
         self.boxImg = np.zeros((self.shape[0], self.shape[1])) - 1
         th = self.thick
         for i, pts in enumerate(self.rects):
-            self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3
+            self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3 ### 选框
             # [y1:y2,x1:x2]
             points = [pts[0], pts[1], [pts[0][0], pts[1][1]], [pts[1][0], pts[0][1]]]
             # [[x1,y1],[x2,y2],[x1,y2],[x2,y1]] = [左上，右下、左下、右上]
             for p in points:
-                self.boxImg[p[1] - th: p[1] + th, p[0] - th: p[0] + th] = i * 3 + 1
+                self.boxImg[p[1] - th: p[1] + th, p[0] - th: p[0] + th] = i * 3 + 1 ### （选边功能需要加上）
 
     def show_labels(self, x, y):
         for i, name in enumerate(self.labels):
@@ -354,9 +378,11 @@ class VideoLabel(object):
             num = int(self.boxImg[y, x])
         if num >= 0:
             self.frame = copy.copy(self.bufframe)
-            idx = int(num / 3)
-            self.chooseRect = idx
-            self.chooseType = num % 3
+
+            '''边框选择机制'''
+            # idx = int(num / 3)
+            self.chooseRect = int(num / 3) # 选第几个框
+            self.chooseType = num % 3 # 默认选框，然后选角，（选边功能需要加上）
 
             '''nothing to do'''
             if len(self.key) == 1:
@@ -495,6 +521,9 @@ class VideoLabel(object):
         self.storename = sorted(self.storename, key = lambda x : int((x.split('.')[1]).split('_')[1]))
         numFrames = len(self.storename)
 
+        if self.length < numFrames:
+            self.length = numFrames
+
         idx_itv = [0,self.length]
         cur_idx = 0
         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
@@ -517,15 +546,34 @@ class VideoLabel(object):
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
                     '''bug bug bug'''
 
+            # if key == ord('r'):
+            #     '''有的帧手势在画面外, 需要将其删除'''
+            #     print key
+            #
+            #     # 'del'
+            #     if self.chooseRect >= 0:
+            #         del self.storeclses[cur_idx][self.chooseRect]
+            #         del self.storerects[cur_idx][self.chooseRect]
+            #
+            #         name, self.frame, self.bufframe, self.shape = self.update(idx)
+            #         self.update_frame()
+            #         pass
+
             # if key == 102:
-            if key == ord('f'):
+            if key == ord('l'):
+                '''不要轻易按下F键'''
                 # 'f', 调到下30帧
+
+                # flag = raw_input('F?!!')
+                # if flag == True:
+                #     pass
+
                 if self.dr == False and len(self.rects) == len(self.classes):
                     if self.storerects:
-                        numFrames -= len(self.storerects)
                         self.flush_storerects_2()
-                        self.storename = self.storename[29:]
-                        self.
+                        numFrames -= len(self.storerects)
+                        self.storename = self.storename[numFrames:]
+                        self.storeclses = []
                         self.storerects = []
 
                     if numFrames == 0:
@@ -611,32 +659,12 @@ class VideoLabel(object):
         self.writeLog(self.video)
         time.sleep(1)
 
-    def update_outputDir(self, video):
-        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
-        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
-        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
-        self.log = os.path.join(self.outputDir, video, 'output.log')
-        self.record = os.path.join(self.outputDir, video, 'record.log')
-
-        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
-        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
-        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
-
+        self.free_move()
 
 if __name__ == '__main__':
-    # videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
-    # imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
-    # outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
-    # labelName = r'.\labels.txt'
-
-    # videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos'  # 视频文件夹地址
-    # imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
-    # outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs'  # images和xmls输出地址
-    # labelName = r'.\labels.txt'
-
-    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'  # 视频文件夹地址
-    imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
-    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'  # images和xmls输出地址
+    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos' # 视频文件夹地址
+    imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos' # 不用设置
+    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs' # images和xmls输出地址
     labelName = r'.\labels.txt'
 
     '''settings'''
@@ -657,7 +685,7 @@ if __name__ == '__main__':
             continue
 
         vl.video = video
-        vl.extractFrames(factor=sample_factor)
+        # vl.extractFrames(factor=sample_factor)
 
         vl.linethick = 1
         vl.lineHighThick = 3
@@ -674,9 +702,13 @@ if __name__ == '__main__':
     4. 边框3像素改成1像素
     5. "q"退出
     6. "a"键和"f"键相互控制
+    7. "f"误触
 
     5. 空白键切换激活的Rect
     6. 方向键移动边
     7. 工作日志记录
     8. 边框图片边缘溢出
+    9. 无法及时捕获边框
+    10. 删除多余的边框[del]（或者用标签1替代）
+    11. update_storerects 有重大BUG
     '''
