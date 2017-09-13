@@ -64,8 +64,7 @@ class labelVisual:
         self.shape = None
         self.boxes = None
         self.selected = -1
-        self.colors = [(0,0,0), (0,255,0), (255,0,0),(0,0,255),
-                       (255,255,66),(0,122,122),(122,0,122), (122,0,122), (122,0,122), (122,0,122)  ]
+        self.colors = self._get_colors_()
         self.xmlParser = xmlParser()
         ptem = open(prefix_template)
         self.ptemLine = ptem.read()
@@ -79,6 +78,12 @@ class labelVisual:
         self.buffboxes = None
         self.scale = 1.0
         ''''''
+
+    def _get_colors_(self): 
+        colorList = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 66),
+                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
+                     (0, 122, 122), (122, 0, 122), (122, 122, 0)]
+        return colorList
 
     def updateFrame(self):
         if self.selected >=0:
@@ -116,9 +121,9 @@ class labelVisual:
         if boxes is None:
             return
         for b, box in enumerate(boxes):
-            cv2.rectangle(self.frame, tuple(box[1:3]), tuple(box[3:]), self.colors[int(box[0])], thickness = 3)
+            cv2.rectangle(self.frame, tuple(box[1:3]), tuple(box[3:]), self.colors[int(box[0])-1], thickness = 3)
             for i in range(30):
-                cv2.line(self.frame, (box[1], box[2]-i), (box [1]+40, box[2]-i), self.colors[int(box[0])], thickness = 1)
+                cv2.line(self.frame, (box[1], box[2]-i), (box [1]+40, box[2]-i), self.colors[int(box[0])-1], thickness = 1)
             cv2.putText(self.frame,box[0],(box[1], box[2]), cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,0),2)
 #            print box[2],box[4],  box[1], box[3]
             self.boxImg[box[2]:box[4], box[1]:box[3]] = b
@@ -207,6 +212,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
+        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -257,8 +263,12 @@ class labelVisual:
                 cv2.imshow("image", self.frame)
                 key = cv2.waitKey(20)
 
-                if self.selected >=0 and key < 58 and key > 48 : # {48:'0', ..., 57:'9', 58:':'}, change the label of gesture in the picture
-#                    print key
+                if self.selected >=0 and (key < 58 and key > 48 or key in list(map(ord, ['q','w','e','r']))): # {48:'0', ..., 57:'9', 58:':'}, change the label of gesture in the picture
+                    if key in list(map(ord, ['q','w','e','r'])):
+                        if key == ord('q'): key = 58
+                        if key == ord('w'): key = 59
+                        if key == ord('e'): key = 60
+                        if key == ord('r'): key = 61
                     print str(key-48)
                     self.boxes[self.selected][0] = str(key-48) # 更改当前激活box的label
                     ''''''
@@ -293,8 +303,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs\1f59d490393c040882eba20199a3a0a8.mp4\imgs'
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs\1f59d490393c040882eba20199a3a0a8.mp4\xmls'
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs\ld1.mp4\imgs'
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs\ld1.mp4\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'

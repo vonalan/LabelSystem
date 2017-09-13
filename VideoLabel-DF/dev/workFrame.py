@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np 
-import cv2 
+import cv2
+
+import copy
 
 
 class Coordinate(object): 
@@ -63,6 +65,7 @@ class WorkFrame(object):
     def __init__(self, name=''):
         self.name = name 
         self.frame = self._initialize_frame_()
+        self.bufferframe = copy.deepcopy(self.frame)
         self.boxes = None
         self.boxImages = None
     

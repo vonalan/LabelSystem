@@ -131,11 +131,12 @@ class VideoLabel(object):
         for k, v in self.classes.items():
             box = rects[k]
             coord = (int((box[0][0] + box[1][0]) / 2), box[1][1])
-            cv2.putText(frame, chr(v), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
+            cv2.putText(frame, str(v-48), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
         cv2.imwrite(self.outputimages_dbg + name, frame)
 
         '''保存xml文件'''
-        classes = list(map(chr, self.classes.values()))
+        # classes = list(map(chr, self.classes.values()))
+        classes = [str(v-48) for v in self.classes.values()]
         boxes = [[item[0][0], item[0][1], item[1][0], item[1][1]] for item in rects]
         try:
             self.writeXML(shape, classes, boxes, self.outputxmls + name[:-4] + '.xml')
@@ -144,7 +145,7 @@ class VideoLabel(object):
 
         '''需要一次性将全部日志写入时，配合op_queue使用'''
         # self.writeLog(name + ' , ' + chr(key))
-        self.writeRecord(name)
+        # self.writeRecord(name)
 
     # 因为有后退、后退30张、前进操作，每次操作都要更新name,frame,bufframe,shape
     def update(self, idx):
@@ -212,6 +213,7 @@ class VideoLabel(object):
         self.maxLabel = 0
 
         colorList = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 66),
+                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
                      (0, 122, 122), (122, 0, 122), (122, 122, 0)]
         for i, line in enumerate(infile):
             line = line.replace('\n', '')
@@ -230,9 +232,10 @@ class VideoLabel(object):
         videoPath = os.path.join(self.videoDir, self.video)
         cap = cv2.VideoCapture(videoPath)
 
-        import random
-        random.seed(0)
-        idx, cnt, offset = 0, 0, random.randint(0, factor)
+        # import random
+        # random.seed(0)
+        # idx, cnt, offset = 0, 0, random.randint(0, factor)
+        idx, cnt, offset = 0, 0, 0
 
         while (cap.isOpened()):
             ret, frame = cap.read()
@@ -322,7 +325,7 @@ class VideoLabel(object):
         for k, v in self.classes.items():
             box = self.rects[k]
             coord = (int((box[0][0] + box[1][0]) / 2), box[1][1])
-            cv2.putText(self.frame, chr(v), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
+            cv2.putText(self.frame, str(v-48), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
 
     def rect_done(self, x, y):
         # 画框完毕
@@ -400,7 +403,7 @@ class VideoLabel(object):
                     # self.rectFlag = 1
 
                     '''if F is pressed'''
-                    if self.fc == False:
+                    if self.xc == 1:
                         self.curRect.append([x, y])
                         self.rectFlag = 1
                     '''if F is pressed'''
@@ -483,6 +486,8 @@ class VideoLabel(object):
     def labelling(self):
         import time
 
+        self.xc = 1
+
         existname = [xml[:-4] + '.png' for xml in os.listdir(self.outputxmls)]
         storename = os.listdir(self.outputimages)
         self.storename = [img for img in storename if img not in existname]
@@ -499,16 +504,57 @@ class VideoLabel(object):
             cv2.imshow("image", self.frame)
             key = cv2.waitKey(20)
 
-            if key in list(map(ord, self.labels)):
+            if key == ord('x'):
+                '''由于需要插值，故而F键锁定删除与插入，A键解除锁定'''
+                if len(self.rects) and self.chooseRect >= 0:
+                    if self.xc == 1:
+                        print(len(self.rects), len(self.classes))
+
+                        bufferrects = copy.deepcopy(self.rects)
+                        bufferclses = copy.deepcopy(self.classes)
+
+                        if bufferclses.has_key(self.chooseRect):
+                            del bufferclses[self.chooseRect]
+                        self.classes = {}
+
+                        del self.rects[self.chooseRect]
+                        self.chooseRect = -1
+
+                        count = 0
+                        for i, rects in enumerate(bufferrects):
+                            if bufferclses.has_key(i):
+                                self.classes[count] = bufferclses[i]
+                                count += 1
+
+                        print(len(self.rects), len(self.classes))
+                        print(self.classes)
+
+                        if len(self.storerects) > 0:
+                            self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                            self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+
+                        self.update_boxImg()
+                        self.update_frame()
+
+            # if key in list(map(ord, self.labels)) + list(map(ord, ['q','w','e'])):
+            if key in [int(label)+48 for label in self.labels] + list(map(ord, ['q','w','e','r'])):
+                if key == ord('q'): key = 58
+                if key == ord('w'): key = 59
+                if key == ord('e'): key = 60
+                if key == ord('r'): key = 61
+
                 if len(self.rects) and self.chooseRect >= 0:
                     self.key.append(key)
                     self.classes[self.chooseRect] = self.key[0]
                     self.key.pop()
+                    self.update_boxImg()
                     self.update_frame()
 
                     '''bug bug bug'''
                     if len(self.storeclses) > 0:
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                    if len(self.storerects) > 0:
+                        self.storerects[cur_idx] = copy.deepcopy(self.rects)
                     '''bug bug bug'''
 
             if key == 102:
@@ -523,10 +569,12 @@ class VideoLabel(object):
                         self.storename = self.storename[self.length:]
 
                     if numFrames == 0:
+                        self.writeRecord(self.video)
                         break
 
                     self.dr = True
                     self.fc = True
+                    self.xc = 0
 
                     '''flag = self.numFrames%self.length'''
                     # idx_itv = [idx + self.length for idx in idx_itv]  # index interval: [idx, idx + self.length)
@@ -545,12 +593,14 @@ class VideoLabel(object):
 
                         name, self.frame, self.bufframe, self.shape = self.update(idx)
                         # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        self.update_boxImg()
                         self.update_frame()
 
                         self.writeLog(str(name) + ' , ' + chr(key))
                         print('F -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], name))
                     # print 'Done! '
 
+                    self.update_boxImg()
                     self.update_frame()
                     cur_idx = idx_itv[1] - 1
 
@@ -562,6 +612,7 @@ class VideoLabel(object):
                     self.rects = self.storerects[cur_idx]
                     name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
                     # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                    self.update_boxImg()
                     self.update_frame()
 
                     print('D -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], name))
@@ -579,30 +630,29 @@ class VideoLabel(object):
                             self.rects = self.storerects[idx]
                             name, self.frame, self.bufframe, self.shape = self.update(idx)
                             # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                            self.update_boxImg()
                             self.update_frame()
 
                             print('A -- idx: %s, idx_f: %s, op_name: %s' % (idx, idx_itv[1], name))
                             self.writeLog(str(name) + ' , ' + chr(key))
+                        self.update_boxImg()
                         self.update_frame()
                         self.dr = False
+                        self.xc = 1
                     else:
                         cur_idx -= 1
                         self.rects = self.storerects[cur_idx]
                         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
                         # self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        self.update_boxImg()
                         self.update_frame()
 
                         print('A -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], name))
                         self.writeLog(str(name) + ' , ' + chr(key))
+                        # self.update_boxImg()
                         # self.update_frame()
-
-            # if key == 113:
-            #     # 'q'，退出
-            #     break
-
         cv2.destroyAllWindows()
-
-        self.writeLog(self.video)
+        # self.writeLog(self.video)
         time.sleep(1)
 
     def update_outputDir(self, video):
@@ -618,20 +668,20 @@ class VideoLabel(object):
 
 
 if __name__ == '__main__':
-    videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
-    imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
-    outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
-    labelName = r'.\labels.txt'
+    # videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
+    # imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
+    # outputDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\outputs' # images和xmls输出地址
+    # labelName = r'.\labels.txt'
 
     # videoDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\videos'  # 视频文件夹地址
     # imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
     # outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs'  # images和xmls输出地址
     # labelName = r'.\labels.txt'
 
-    # videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'  # 视频文件夹地址
-    # imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
-    # outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'  # images和xmls输出地址
-    # labelName = r'.\labels.txt'
+    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'  # 视频文件夹地址
+    imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
+    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'  # images和xmls输出地址
+    labelName = r'.\labels.txt'
 
     '''settings'''
     sample_factor = 6  # 每6帧抽取一帧
@@ -673,5 +723,7 @@ if __name__ == '__main__':
     7. 工作日志记录
     8. 边框图片边缘溢出
     9. 无法及时捕获边框
-    10. 删除多余的边框[del]（或者用标签1替代）
+    10. 可以自由地添加或者删除边框, 使用list()替代dict()
+    11. 添加缩放工具
+    12. 添加旋转工具
     '''

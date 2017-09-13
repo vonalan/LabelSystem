@@ -511,8 +511,8 @@ class VideoLabel(object):
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
                     '''bug bug bug'''
 
-            if key == 102:
-            # if key == ord('f'):
+            # if key == 102:
+            if key == ord('g'):
                 # 'f', 调到下30帧
                 if self.dr == False and len(self.rects) == len(self.classes):
                     if self.storerects:
