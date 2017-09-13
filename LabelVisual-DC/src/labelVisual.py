@@ -303,8 +303,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs\ld1.mp4\imgs'
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs\ld1.mp4\xmls'
+    imgdir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\outputs\ld2.mp4\imgs'
+    xmldir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\outputs\ld2.mp4\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'

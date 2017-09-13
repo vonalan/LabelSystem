@@ -20,10 +20,11 @@ class VideoLabel(object):
         self.outputXMLDir = './'
 
         '''control block'''
-        self.FC = 0 
-        self.AC = 1 
-        self.DC = 1 
-        self.UC = 1
+        self.FC = 0 # control F
+        self.AC = 1 # control A 
+        self.DC = 1 # control D 
+        self.UC = 1 # control update
+        self.XC = 0 # control delete
 
 
     def _update_output_dirs_(self): 

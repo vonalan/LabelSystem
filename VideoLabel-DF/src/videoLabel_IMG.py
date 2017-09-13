@@ -77,6 +77,7 @@ class VideoLabel(object):
         self.dr = False
         self.fc = False
         self.video = ''
+        self.scale = 1.0
 
     # 输出xml方法，
     def writeXML(self, imgsize, names, boxes, outname):
@@ -154,6 +155,7 @@ class VideoLabel(object):
         self.frame = cv2.imread(imgname)
         self.bufframe = copy.deepcopy(self.frame)
         self.shape = self.frame.shape
+        self.chooseRect = -1
 
         ''''''
         if len(self.storeclses) > 0:
@@ -243,6 +245,7 @@ class VideoLabel(object):
                 if not (cnt + offset) % factor:
                     idx += 1
                     imgPath = os.path.join(self.outputimages, self.video + '_' + str(idx) + '.png')
+                    # frame = self.resizeFrame(frame)
                     cv2.imwrite(imgPath, frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -283,6 +286,7 @@ class VideoLabel(object):
             cv2.rectangle(self.frame, tuple(self.curRect[0]), (x, y), (0, 255, 0), thickness=self.linethick)
         if self.chooseRect >= 0:
             # print('updata_frame:', self.chooseType)
+            # print self.chooseRect
             points = self.rects[self.chooseRect]
             if self.chooseType == 0:
                 # 移动框
@@ -606,7 +610,7 @@ class VideoLabel(object):
 
             if key == 100:
                 # 'd', 进入下一张图片
-                if self.fc == True and (cur_idx + 1) < idx_itv[1]:
+                if self.fc == True and (cur_idx + 1) < idx_itv[1] and len(self.rects) == len(self.classes):
                     cur_idx += 1
 
                     self.rects = self.storerects[cur_idx]
@@ -620,7 +624,7 @@ class VideoLabel(object):
 
             if key == 97:
                 # 'a', 返回上一张图片
-                if self.fc == True and cur_idx - 1 > idx_itv[0] - 1:
+                if self.fc == True and cur_idx - 1 > idx_itv[0] - 1 and len(self.rects) == len(self.classes):
                     if self.dr == True:
                         # print 'Interpolating...',
                         self.update_storerects(self.storerects[idx_itv[0]], self.storerects[idx_itv[1] - 1], idx_itv[1])
@@ -667,6 +671,52 @@ class VideoLabel(object):
         if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
 
 
+    def resizeFrame(self, frame):
+        # 显示器参数
+        # [高，宽]
+        height = 1080 * 9 // 10
+        width = 1920 * 9 // 10
+        screen = [height, width]
+        # screen = [270, 480]
+
+        # [高，宽]
+        scale = 1.0
+        sizes = [frame.shape[0], frame.shape[1]]
+        # dstsizes = sizes
+
+        r0 = (sizes[0] - screen[0])/float(screen[0])
+        r1 = (sizes[1] - screen[1])/float(screen[1])
+
+        if r0 > 0 and r1 > 0:
+            ratio = r1/r0
+            if ratio > 1:
+                scale *= (screen[1] / float(sizes[1]))
+                sizes[1] = screen[1]
+                sizes[0] = int(scale * sizes[0])
+            else:
+                scale *= (screen[0] / float(sizes[0]))
+                sizes[0] = screen[0]
+                sizes[1] = int(scale * sizes[1])
+        elif r0 > 0 and r1 <=0:
+            scale *= (screen[0] / float(sizes[0]))
+            sizes[0] = screen[0]
+            sizes[1] = int(scale * sizes[1])
+        elif r0 <= 0 and r1 > 0:
+            scale *= (screen[1] / float(sizes[1]))
+            sizes[1] = screen[1]
+            sizes[0] = int(scale * sizes[0])
+        else:
+            return frame
+
+        # newsize
+        # [宽，高]
+        sizes = tuple(reversed(sizes))
+        frame = cv2.resize(frame, sizes, interpolation=cv2.INTER_CUBIC)
+
+        self.scale = scale
+        return frame
+
+
 if __name__ == '__main__':
     # videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
     # imageDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\images' # 不用设置
@@ -678,10 +728,10 @@ if __name__ == '__main__':
     # outputDir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\0907fuyangben\outputs'  # images和xmls输出地址
     # labelName = r'.\labels.txt'
 
-    videoDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\videos'  # 视频文件夹地址
-    imageDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\images'  # 不用设置
-    outputDir = r'D:\Users\Administrator\Desktop\HGR\VideoLabel-DF\outputs'  # images和xmls输出地址
-    labelName = r'.\labels.txt'
+    videoDir = r'../videos'  # 视频文件夹地址
+    imageDir = r'../images'  # 不用设置
+    outputDir = r'../outputs'  # images和xmls输出地址
+    labelName = r'./labels.txt'
 
     '''settings'''
     sample_factor = 6  # 每6帧抽取一帧
@@ -701,11 +751,11 @@ if __name__ == '__main__':
             continue
 
         vl.video = video
-        # vl.extractFrames(factor=sample_factor)
+        vl.extractFrames(factor=sample_factor)
 
         vl.linethick = 1
         vl.lineHighThick = 3
-        vl.length = 30  # 选择F键要跳转的帧数，debug使用
+        vl.length = 10  # 选择F键要跳转的帧数，debug使用
 
         vl.labelling()
 
