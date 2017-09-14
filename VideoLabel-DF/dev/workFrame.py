@@ -11,6 +11,8 @@ class Coordinate(object):
     def __init__(self, x=0, y=0): 
         self.x = x 
         self.y = y
+    def get_coordinate(self): 
+        return [self.x, self.y]
 
 
 class Rectagle(object):
@@ -38,9 +40,9 @@ class BBox(object):
     def __int__(self, label='', xmin=0, ymin=0, xmax=0, ymax=0):
         self.label = label
         self.mainRect = Rectagle(xmin=xmin, ymin=ymin, xmax=xmax, ymax=ymax) # [(xmin, ymin), (xmax, ymax)]
-        self.subRects = self._get_sub_rects_() # 4*[(xmin, ymin), (xmax, ymax)]
+        self.subRects = self.get_sub_rects() # 4*[(xmin, ymin), (xmax, ymax)]
 
-    def _get_sub_rects_(self, thick=None):
+    def get_sub_rects(self, thick=None):
         subRects = []
         for pt in self.mainRect.get_points():
             xmin = pt.x - thick 
@@ -50,6 +52,8 @@ class BBox(object):
             rect = Rectagle(xmin, ymin, xmax, ymax)
             subRects.append(rect)
         return subRects
+    
+
 
 class WorkFrame(object):
     def __init__(self, name=''):
@@ -57,8 +61,9 @@ class WorkFrame(object):
         self.checked = False
         self.frame = self._initialize_frame_()
         self.bufferframe = copy.deepcopy(self.frame)
-        self.boxes = None
-        self.boxImages = None
+        self.shape = self.frame.shape
+        self.boxes = [BBox()]
+        self.boxImage = np.zeros((self.shape[0],self.shape[1])) - 1
     
     def show_frame(self): 
         cv2.namedWindow(self.name,cv2.WINDOW_AUTOSIZE)
@@ -72,6 +77,14 @@ class WorkFrame(object):
     def _initialize_frame_(self, nameList=[]):
         frame = cv2.imread(self.name)
         return frame 
+
+    def update_box_imgs(self, thick=None): 
+        th = self.thick
+        for i, box in enumerate(self.boxes):
+            rect = box.mainRect
+            self.boxImage[rect.min.y:rect.max.y, rect.min.x:rect.max.x] = i * 3 # [y1:y2,x1:x2]
+            for p in box.get_sub_rects(): 
+                self.boxImage[p[1] - th: p[1] + th, p[0] - th: p[0] + th] = i * 3 + 1
 
     def update_frame(self):
         pass
