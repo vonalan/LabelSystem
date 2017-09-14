@@ -10,7 +10,7 @@ class Coordinate(object):
     '''2-D Coordinates'''
     def __init__(self, x=0, y=0): 
         self.x = x 
-        self.y = y 
+        self.y = y
 
 
 class Rectagle(object):
@@ -22,23 +22,13 @@ class Rectagle(object):
         self.min = Coordinate(x=xmin, y=ymin)
         self.max = Coordinate(x=xmax, y=ymax)
 
-        # self.xmin = 0
-        # self.ymin = 0
-        # self.xmax = 0
-        # self.ymax = 0
-
-        self.coordinates = None
-        self.points = None
-
-    def get_coordinates(self):
-        return [[self.xmin,self.ymin], [self.xmax,self.ymax]]
-
     def get_points(self):
-        return [[self.xmin,self.ymin], [self.xmax,self.ymax],
-                [self.xmax,self.ymin], [self.xmin,self.ymax]]
-
-    def update(self):
-        pass
+        points = []
+        points.append(self.min)
+        points.append(Coordinate(x=self.min.x, y=self.max.y))
+        points.append(Coordinate(x=self.max.x, y=self.min.y))
+        points.append(self.max)
+        return points
 
 
 class BBox(object):
@@ -52,7 +42,7 @@ class BBox(object):
 
     def _get_sub_rects_(self, thick=None):
         subRects = []
-        for pt in self.mainRect.points: 
+        for pt in self.mainRect.get_points():
             xmin = pt.x - thick 
             ymin = pt.y - thick 
             xmax = pt.x + thick 
@@ -63,7 +53,8 @@ class BBox(object):
 
 class WorkFrame(object):
     def __init__(self, name=''):
-        self.name = name 
+        self.name = name
+        self.checked = False
         self.frame = self._initialize_frame_()
         self.bufferframe = copy.deepcopy(self.frame)
         self.boxes = None
@@ -78,7 +69,7 @@ class WorkFrame(object):
                 break
         cv2.destroyAllWindows()
 
-    def _initialize_frame_(self): 
+    def _initialize_frame_(self, nameList=[]):
         frame = cv2.imread(self.name)
         return frame 
 
@@ -99,7 +90,7 @@ class WorkFrame(object):
 class FrameFlow(object): 
     def __init__(self, nameList=[]): 
         self.nameList = nameList
-        self.wkFrames = _initialize_frame_()
+        self.wkFrames = self._initialize_flow_()
         self.curFrame = WorkFrame()
     
     def _initialize_flow_(self): 

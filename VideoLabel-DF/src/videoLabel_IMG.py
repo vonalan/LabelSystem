@@ -78,6 +78,7 @@ class VideoLabel(object):
         self.fc = False
         self.video = ''
         self.scale = 1.0
+        self.gap = 25
 
     # 输出xml方法，
     def writeXML(self, imgsize, names, boxes, outname):
@@ -168,10 +169,10 @@ class VideoLabel(object):
         self.shape = self.frame.shape
         self.chooseRect = -1
 
-        ''''''
-        if len(self.storeclses) > 0:
-            self.classes = copy.deepcopy(self.storeclses[idx])
-        ''''''
+        # ''''''
+        # if len(self.storeclses) > 0:
+        #     self.classes = copy.deepcopy(self.storeclses[idx])
+        # ''''''
 
         return name, self.frame, self.bufframe, self.shape
 
@@ -418,7 +419,7 @@ class VideoLabel(object):
             self.chooseRect = idx
             self.chooseType = num % 3
 
-            print len(self.rects), self.boxImg[y,x], self.chooseRect, self.chooseType
+            # print len(self.rects), self.boxImg[y,x], self.chooseRect, self.chooseType
 
 
             '''nothing to do'''
@@ -456,7 +457,7 @@ class VideoLabel(object):
         points[self.selectedX][0] = x # reference
         points[self.selectedY][1] = y # reference
 
-        print self.rects[self.chooseRect], self.shape, (x,y)
+        # print self.rects[self.chooseRect], self.shape, (x,y)
 
     def draw_rect(self, event, x, y, flags, param):
         if self.rightClick == 0:
@@ -502,9 +503,14 @@ class VideoLabel(object):
                             self.rects[self.chooseRect][1][1], self.rects[self.chooseRect][0][1]
 
                     if self.rects[self.chooseRect][0][0] < 0:
-                        print "self.rects[self.chooseRect][0][0] < 0"
+                        # print "self.rects[self.chooseRect][0][0] < 0"
+                        self.rects[self.chooseRect][0][0] = 0
+                        self.rects[self.chooseRect][1][0] = self.gap
                     if self.rects[self.chooseRect][0][1] < 0:
-                        print "self.rects[self.chooseRect][0][0] < 0"
+                        # print "self.rects[self.chooseRect][0][0] < 0"
+                        self.rects[self.chooseRect][0][1] = 0
+                        self.rects[self.chooseRect][1][1] = self.gap
+
                     self.update_boxImg()
 
                     '''update the last rects of storerects'''
@@ -536,40 +542,40 @@ class VideoLabel(object):
                     self.startPos[1] = y
 
                     '''边框溢出问题'''
-                    print self.rects[self.chooseRect], self.shape, (x,y)
+                    # print self.rects[self.chooseRect], self.shape, (x,y)
 
-                    gap = 5
+                    # gap = 10
                     # min.x
                     if self.rects[self.chooseRect][0][0] < 0: # min.x
                         self.rects[self.chooseRect][0][0] = 0
-                    elif self.rects[self.chooseRect][0][0] > self.shape[0] - 5:
-                        self.rects[self.chooseRect][0][0] = self.shape[0] - 5
+                    elif self.rects[self.chooseRect][0][0] > self.shape[1] - self.gap:
+                        self.rects[self.chooseRect][0][0] = self.shape[1] - self.gap
                     else:
                         self.rects[self.chooseRect][0][0] += deltaX
 
                     # min.y
                     if self.rects[self.chooseRect][0][1] < 0: # min.y
                         self.rects[self.chooseRect][0][1] = 0
-                    elif self.rects[self.chooseRect][0][1] > self.shape[1] - 5:
-                        self.rects[self.chooseRect][0][1] = self.shape[1] - 5
+                    elif self.rects[self.chooseRect][0][1] > self.shape[0] - self.gap:
+                        self.rects[self.chooseRect][0][1] = self.shape[0] - self.gap
                     else:
                         self.rects[self.chooseRect][0][1] += deltaY
 
                     # max.x
-                    if self.rects[self.chooseRect][1][0] < 0:  # max.x
-                        self.rects[self.chooseRect][0][0] = 0
-                    elif self.rects[self.chooseRect][0][0] > self.shape[0] - 5:
-                        self.rects[self.chooseRect][0][0] = self.shape[0] - 5
+                    if self.rects[self.chooseRect][1][0] < self.gap:  # max.x
+                        self.rects[self.chooseRect][1][0] = self.gap
+                    elif self.rects[self.chooseRect][1][0] > self.shape[1]:
+                        self.rects[self.chooseRect][1][0] = self.shape[1]
                     else:
-                        self.rects[self.chooseRect][0][0] += deltaX
+                        self.rects[self.chooseRect][1][0] += deltaX
 
                     # max.y
-                    if self.rects[self.chooseRect][0][1] < 0:  # max.y
-                        self.rects[self.chooseRect][0][1] = 0
-                    elif self.rects[self.chooseRect][0][1] > self.shape[1] - 5:
-                        self.rects[self.chooseRect][0][1] = self.shape[1] - 5
+                    if self.rects[self.chooseRect][1][1] < self.gap:  # max.y
+                        self.rects[self.chooseRect][1][1] = self.gap
+                    elif self.rects[self.chooseRect][1][1] > self.shape[0]:
+                        self.rects[self.chooseRect][1][1] = self.shape[0]
                     else:
-                        self.rects[self.chooseRect][0][1] += deltaY
+                        self.rects[self.chooseRect][1][1] += deltaY
                     '''边框溢出问题'''
 
                     # self.rects[self.chooseRect][0][0] += deltaX
@@ -616,19 +622,22 @@ class VideoLabel(object):
         self.storename = sorted(self.storename, key = lambda x : int((x.split('.')[1]).split('_')[1]))
         numFrames = len(self.storename)
 
+        '''确保每一帧被检查过才能进行窗口移动'''
+        # self.check = 0
+        # self.storecheck = []
+
         idx_itv = [0,self.length]
         cur_idx = 0
         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
 
-        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
-        # cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
+        # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
             key = cv2.waitKey(20)
 
             if key == ord('x'):
-            # if key == 127:
                 '''由于需要插值，故而F键锁定删除与插入，A键解除锁定'''
                 if len(self.rects) and self.chooseRect >= 0:
                     if self.xc == 1:
@@ -656,7 +665,6 @@ class VideoLabel(object):
                         if len(self.storerects) > 0:
                             self.storerects[cur_idx] = copy.deepcopy(self.rects)
                             self.storeclses[cur_idx] = copy.deepcopy(self.classes)
-
                         self.update_boxImg()
                         self.update_frame()
 
@@ -686,8 +694,16 @@ class VideoLabel(object):
                 # 'f', 调到下30帧
                 if self.dr == False and len(self.rects) == len(self.classes):
                     if self.storerects:
+                        '''跳转帧之前，将当前帧写回缓冲区'''
+                        # self.check = 1
+                        self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                        self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                        # self.storecheck[cur_idx] = self.check
+                        self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        # print self.storecheck
+
                         numFrames -= len(self.storerects)
-                        self.flush_storerects_2()
+                        # self.flush_storerects_2()
                         self.storerects = []
                         self.storeclses = []
                         self.storename = self.storename[self.length:]
@@ -707,16 +723,19 @@ class VideoLabel(object):
 
                     # print 'Skipping to next %d frame...'%(self.length),
                     for idx in range(idx_itv[0], idx_itv[1]):
+                        '''跳转帧之前，将当前帧写回缓冲区'''
                         rects = copy.deepcopy(self.rects)
                         self.storerects.append(rects)
-
-                        ''''''
                         clses = copy.deepcopy(self.classes)
                         self.storeclses.append(clses)
-                        ''''''
+                        # check = self.check
+                        # self.storecheck.append(check)
 
+                        '''从缓冲区获取帧'''
+                        # self.rects = self.storerects[idx]
+                        # self.classes = self.storeclses[idx]
+                        # self.check = self.storecheck[idx]
                         name, self.frame, self.bufframe, self.shape = self.update(idx)
-                        # self.draw_static(name, self.frame, self.shape, key, self.rects)
                         self.update_boxImg()
                         self.update_frame()
 
@@ -731,15 +750,20 @@ class VideoLabel(object):
             if key == 100:
                 # 'd', 进入下一张图片
                 if self.fc == True and (cur_idx + 1) < idx_itv[1] and len(self.rects) == len(self.classes):
-                    # '''保存当前帧，再跳转到下一帧'''
-                    # self.storerects[cur_idx] = copy.deepcopy(self.rects)
-                    # self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                    '''跳转帧之前，将当前帧写回缓冲区/磁盘'''
+                    self.check = 1
+                    self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                    self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                    # self.storecheck[cur_idx] = self.check
+                    self.draw_static(name, self.frame, self.shape, key, self.rects)
+                    # print self.storecheck
 
+                    '''从缓冲区获取帧'''
                     cur_idx += 1
-
                     self.rects = self.storerects[cur_idx]
+                    self.classes = self.storeclses[cur_idx]
+                    # self.check = self.storecheck[cur_idx]
                     name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
-                    # self.draw_static(name, self.frame, self.shape, key, self.rects)
                     self.update_boxImg()
                     self.update_frame()
 
@@ -755,9 +779,17 @@ class VideoLabel(object):
                         # print 'Done! '
 
                         for idx in range(idx_itv[0], idx_itv[1]):
-                            self.rects = self.storerects[idx]
-                            name, self.frame, self.bufframe, self.shape = self.update(idx)
+                            '''跳转帧之前，将当前帧写回缓冲区/磁盘'''
+                            # self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                            # self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                            # self.storecheck[cur_idx] = self.check
                             # self.draw_static(name, self.frame, self.shape, key, self.rects)
+
+                            '''从缓冲区获取帧'''
+                            self.rects = self.storerects[idx]
+                            self.classes = self.storeclses[idx]
+                            # self.check = self.storecheck[cur_idx]
+                            name, self.frame, self.bufframe, self.shape = self.update(idx)
                             self.update_boxImg()
                             self.update_frame()
 
@@ -768,23 +800,26 @@ class VideoLabel(object):
                         self.dr = False
                         self.xc = 1
                     else:
-                        '''保存当前帧，再跳转到下一帧'''
-                        # self.storerects[cur_idx] = copy.deepcopy(self.rects)
-                        # self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                        '''跳转帧之前，将当前帧写回缓冲区/磁盘'''
+                        self.check = 1
+                        self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                        self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+                        # self.storecheck[cur_idx] = self.check
+                        self.draw_static(name, self.frame, self.shape, key, self.rects)
+                        # print self.storecheck
 
+                        '''从缓冲区获取帧'''
                         cur_idx -= 1
                         self.rects = self.storerects[cur_idx]
+                        self.classes = self.storeclses[cur_idx]
+                        # self.check = self.storecheck[cur_idx]
                         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
-                        # self.draw_static(name, self.frame, self.shape, key, self.rects)
                         self.update_boxImg()
                         self.update_frame()
 
                         print('A -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], name))
                         self.writeLog(str(name) + ' , ' + chr(key))
-                        # self.update_boxImg()
-                        # self.update_frame()
         cv2.destroyAllWindows()
-        # self.writeLog(self.video)
         time.sleep(1)
 
 if __name__ == '__main__':

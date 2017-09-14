@@ -48,19 +48,14 @@ class VideoLabel(object):
         else:
             print("None", (x,y))
                 
-    def label(self): 
-        self._extract_frames_()
-
-        nameList = ['video_%s'%(str(i)) for i in range(100)]
-
-
-        cv2.namedWindow('image')
+    def label(self):
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while (True): 
             key = cv2.waitKey(20)
             if key in map(ord, self.labels): 
                 print(str(key-48)) 
-            if key == ord('f'): 
+            if key == ord('g'):
                 if self.AC == 1 and self.DC == 1:
                     self.FC = 1 
                     self.UC = 1 
@@ -88,6 +83,9 @@ class VideoLabel(object):
             if key == 27:
                 break 
         cv2.destroyAllWindows()
+
+    def main(self):
+        self._extract_frames_()
 
 if __name__ == "__main__": 
     video = ''
