@@ -24,7 +24,7 @@ class VideoLabel(object):
         self.AC = 1 # control A 
         self.DC = 1 # control D 
         self.UC = 1 # control update
-        self.XC = 0 # control delete
+        self.XC = 1 # control delete
 
 
     def _update_output_dirs_(self): 
@@ -65,12 +65,14 @@ class VideoLabel(object):
                     self.FC = 1 
                     self.UC = 1 
                     self.AC = 0 
-                    self.DC = 0 
+                    self.DC = 0
+                    self.XC = 0
                     print("F -- Duplication. ")
             if key == ord('a'): 
                 if self.FC == 1:
                     if self.UC == 1: 
-                        self.UC = 0 
+                        self.UC = 0
+                        self.XC = 1
                         print("A -- Interpolation. ")
                     else:
                         self.AC = 1
@@ -79,7 +81,11 @@ class VideoLabel(object):
                 if self.FC == 1 and self.AC == 1: 
                     self.DC = 1 
                     print('D -- Next. ')
-            if key == 27: 
+            if key == ord('x'):
+                if self.XC == 1:
+                    print('X -- Delete. ')
+
+            if key == 27:
                 break 
         cv2.destroyAllWindows()
 

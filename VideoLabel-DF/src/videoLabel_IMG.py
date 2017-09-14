@@ -116,6 +116,17 @@ class VideoLabel(object):
         log.write(strings + '\n')
         log.close()
 
+    def update_outputDir(self, video):
+        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
+        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
+        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
+        self.log = os.path.join(self.outputDir, video, 'output.log')
+        self.record = os.path.join(self.outputDir, video, 'record.log')
+
+        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
+        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
+        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
+
     # 画图片中的框，四个小角，类别，还有输出图片，xml，日志操作，所以不同于update_frame里面的相关部分
     def draw_static(self, name, frame, shape, key, rects):
         '''写入原图'''
@@ -230,6 +241,51 @@ class VideoLabel(object):
         infile.close()
         self.labelWidth = self.maxLabel * 10
 
+    def resizeFrame(self, frame):
+        # 显示器参数
+        # [高，宽]
+        height = 1080 * 9 // 10
+        width = 1920 * 9 // 10
+        screen = [height, width]
+        # screen = [270, 480]
+
+        # [高，宽]
+        scale = 1.0
+        sizes = [frame.shape[0], frame.shape[1]]
+        # dstsizes = sizes
+
+        r0 = (sizes[0] - screen[0])/float(screen[0])
+        r1 = (sizes[1] - screen[1])/float(screen[1])
+
+        if r0 > 0 and r1 > 0:
+            ratio = r1/r0
+            if ratio > 1:
+                scale *= (screen[1] / float(sizes[1]))
+                sizes[1] = screen[1]
+                sizes[0] = int(scale * sizes[0])
+            else:
+                scale *= (screen[0] / float(sizes[0]))
+                sizes[0] = screen[0]
+                sizes[1] = int(scale * sizes[1])
+        elif r0 > 0 and r1 <=0:
+            scale *= (screen[0] / float(sizes[0]))
+            sizes[0] = screen[0]
+            sizes[1] = int(scale * sizes[1])
+        elif r0 <= 0 and r1 > 0:
+            scale *= (screen[1] / float(sizes[1]))
+            sizes[1] = screen[1]
+            sizes[0] = int(scale * sizes[0])
+        else:
+            return frame
+
+        # newsize
+        # [宽，高]
+        sizes = tuple(reversed(sizes))
+        frame = cv2.resize(frame, sizes, interpolation=cv2.INTER_CUBIC)
+
+        self.scale = scale
+        return frame
+
     def extractFrames(self, factor=6):
         videoPath = os.path.join(self.videoDir, self.video)
         cap = cv2.VideoCapture(videoPath)
@@ -245,7 +301,8 @@ class VideoLabel(object):
                 if not (cnt + offset) % factor:
                     idx += 1
                     imgPath = os.path.join(self.outputimages, self.video + '_' + str(idx) + '.png')
-                    # frame = self.resizeFrame(frame)
+                    frame = self.resizeFrame(frame)
+                    # print frame.shape
                     cv2.imwrite(imgPath, frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -262,7 +319,7 @@ class VideoLabel(object):
     # 原self.boxImag的值就是-1，第一次更新后，使得self.boxImg中的[y1:y2,x1:x2]的部分为3，四个小角的部分为4
 
     def update_boxImg(self):
-        self.boxImg = np.zeros((self.shape[0], self.shape[1])) - 1
+        self.boxImg = np.zeros((self.shape[0], self.shape[1])) - 1 # -1
         th = self.thick
         for i, pts in enumerate(self.rects):
             self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3
@@ -353,11 +410,16 @@ class VideoLabel(object):
             num = -1
         else:
             num = int(self.boxImg[y, x])
+            cv2.imshow('fff', self.boxImg)
+
         if num >= 0:
             self.frame = copy.copy(self.bufframe)
             idx = int(num / 3)
             self.chooseRect = idx
             self.chooseType = num % 3
+
+            print len(self.rects), self.boxImg[y,x], self.chooseRect, self.chooseType
+
 
             '''nothing to do'''
             if len(self.key) == 1:
@@ -389,10 +451,12 @@ class VideoLabel(object):
         deltaY = y - self.startPos[1]
         self.startPos[0] = x
         self.startPos[1] = y
-        points = self.rects[self.chooseRect]
+        points = self.rects[self.chooseRect] # points = [[xmin, ymin], [xmax, ymax]]
         #        print deltaX, deltaY
-        points[self.selectedX][0] = x
-        points[self.selectedY][1] = y
+        points[self.selectedX][0] = x # reference
+        points[self.selectedY][1] = y # reference
+
+        print self.rects[self.chooseRect], self.shape, (x,y)
 
     def draw_rect(self, event, x, y, flags, param):
         if self.rightClick == 0:
@@ -427,6 +491,22 @@ class VideoLabel(object):
                     self.selectedY = -1
                     # self.update_boxImg()
 
+                    '''边框溢出问题'''
+                    # min.x, max.x
+                    if self.rects[self.chooseRect][0][0] > self.rects[self.chooseRect][1][0]:
+                        self.rects[self.chooseRect][0][0], self.rects[self.chooseRect][1][0] = \
+                            self.rects[self.chooseRect][1][0], self.rects[self.chooseRect][0][0]
+                    # min.y, max.y
+                    if self.rects[self.chooseRect][0][1] > self.rects[self.chooseRect][1][1]:
+                        self.rects[self.chooseRect][0][1], self.rects[self.chooseRect][1][1] = \
+                            self.rects[self.chooseRect][1][1], self.rects[self.chooseRect][0][1]
+
+                    if self.rects[self.chooseRect][0][0] < 0:
+                        print "self.rects[self.chooseRect][0][0] < 0"
+                    if self.rects[self.chooseRect][0][1] < 0:
+                        print "self.rects[self.chooseRect][0][0] < 0"
+                    self.update_boxImg()
+
                     '''update the last rects of storerects'''
                     if self.storerects and self.dr == True:
                         self.storerects[-1] = copy.deepcopy(self.rects)
@@ -454,10 +534,48 @@ class VideoLabel(object):
                     deltaY = y - self.startPos[1]
                     self.startPos[0] = x
                     self.startPos[1] = y
-                    self.rects[self.chooseRect][0][0] += deltaX
-                    self.rects[self.chooseRect][1][0] += deltaX
-                    self.rects[self.chooseRect][0][1] += deltaY
-                    self.rects[self.chooseRect][1][1] += deltaY
+
+                    '''边框溢出问题'''
+                    print self.rects[self.chooseRect], self.shape, (x,y)
+
+                    gap = 5
+                    # min.x
+                    if self.rects[self.chooseRect][0][0] < 0: # min.x
+                        self.rects[self.chooseRect][0][0] = 0
+                    elif self.rects[self.chooseRect][0][0] > self.shape[0] - 5:
+                        self.rects[self.chooseRect][0][0] = self.shape[0] - 5
+                    else:
+                        self.rects[self.chooseRect][0][0] += deltaX
+
+                    # min.y
+                    if self.rects[self.chooseRect][0][1] < 0: # min.y
+                        self.rects[self.chooseRect][0][1] = 0
+                    elif self.rects[self.chooseRect][0][1] > self.shape[1] - 5:
+                        self.rects[self.chooseRect][0][1] = self.shape[1] - 5
+                    else:
+                        self.rects[self.chooseRect][0][1] += deltaY
+
+                    # max.x
+                    if self.rects[self.chooseRect][1][0] < 0:  # max.x
+                        self.rects[self.chooseRect][0][0] = 0
+                    elif self.rects[self.chooseRect][0][0] > self.shape[0] - 5:
+                        self.rects[self.chooseRect][0][0] = self.shape[0] - 5
+                    else:
+                        self.rects[self.chooseRect][0][0] += deltaX
+
+                    # max.y
+                    if self.rects[self.chooseRect][0][1] < 0:  # max.y
+                        self.rects[self.chooseRect][0][1] = 0
+                    elif self.rects[self.chooseRect][0][1] > self.shape[1] - 5:
+                        self.rects[self.chooseRect][0][1] = self.shape[1] - 5
+                    else:
+                        self.rects[self.chooseRect][0][1] += deltaY
+                    '''边框溢出问题'''
+
+                    # self.rects[self.chooseRect][0][0] += deltaX
+                    # self.rects[self.chooseRect][1][0] += deltaX
+                    # self.rects[self.chooseRect][0][1] += deltaY
+                    # self.rects[self.chooseRect][1][1] += deltaY
                     self.update_boxImg()
                     self.update_frame()
                 elif self.rectFlag == 3:
@@ -502,17 +620,19 @@ class VideoLabel(object):
         cur_idx = 0
         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
 
-        cv2.namedWindow('image')
+        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
+        # cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
             key = cv2.waitKey(20)
 
             if key == ord('x'):
+            # if key == 127:
                 '''由于需要插值，故而F键锁定删除与插入，A键解除锁定'''
                 if len(self.rects) and self.chooseRect >= 0:
                     if self.xc == 1:
-                        print(len(self.rects), len(self.classes))
+                        # print(len(self.rects), len(self.classes))
 
                         bufferrects = copy.deepcopy(self.rects)
                         bufferclses = copy.deepcopy(self.classes)
@@ -530,8 +650,8 @@ class VideoLabel(object):
                                 self.classes[count] = bufferclses[i]
                                 count += 1
 
-                        print(len(self.rects), len(self.classes))
-                        print(self.classes)
+                        # print(len(self.rects), len(self.classes))
+                        # print(self.classes)
 
                         if len(self.storerects) > 0:
                             self.storerects[cur_idx] = copy.deepcopy(self.rects)
@@ -561,8 +681,8 @@ class VideoLabel(object):
                         self.storerects[cur_idx] = copy.deepcopy(self.rects)
                     '''bug bug bug'''
 
-            if key == 102:
-            # if key == ord('f'):
+            # if key == 102:
+            if key == ord('g'):
                 # 'f', 调到下30帧
                 if self.dr == False and len(self.rects) == len(self.classes):
                     if self.storerects:
@@ -611,6 +731,10 @@ class VideoLabel(object):
             if key == 100:
                 # 'd', 进入下一张图片
                 if self.fc == True and (cur_idx + 1) < idx_itv[1] and len(self.rects) == len(self.classes):
+                    # '''保存当前帧，再跳转到下一帧'''
+                    # self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                    # self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+
                     cur_idx += 1
 
                     self.rects = self.storerects[cur_idx]
@@ -644,6 +768,10 @@ class VideoLabel(object):
                         self.dr = False
                         self.xc = 1
                     else:
+                        '''保存当前帧，再跳转到下一帧'''
+                        # self.storerects[cur_idx] = copy.deepcopy(self.rects)
+                        # self.storeclses[cur_idx] = copy.deepcopy(self.classes)
+
                         cur_idx -= 1
                         self.rects = self.storerects[cur_idx]
                         name, self.frame, self.bufframe, self.shape = self.update(cur_idx)
@@ -658,64 +786,6 @@ class VideoLabel(object):
         cv2.destroyAllWindows()
         # self.writeLog(self.video)
         time.sleep(1)
-
-    def update_outputDir(self, video):
-        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
-        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
-        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
-        self.log = os.path.join(self.outputDir, video, 'output.log')
-        self.record = os.path.join(self.outputDir, video, 'record.log')
-
-        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
-        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
-        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
-
-
-    def resizeFrame(self, frame):
-        # 显示器参数
-        # [高，宽]
-        height = 1080 * 9 // 10
-        width = 1920 * 9 // 10
-        screen = [height, width]
-        # screen = [270, 480]
-
-        # [高，宽]
-        scale = 1.0
-        sizes = [frame.shape[0], frame.shape[1]]
-        # dstsizes = sizes
-
-        r0 = (sizes[0] - screen[0])/float(screen[0])
-        r1 = (sizes[1] - screen[1])/float(screen[1])
-
-        if r0 > 0 and r1 > 0:
-            ratio = r1/r0
-            if ratio > 1:
-                scale *= (screen[1] / float(sizes[1]))
-                sizes[1] = screen[1]
-                sizes[0] = int(scale * sizes[0])
-            else:
-                scale *= (screen[0] / float(sizes[0]))
-                sizes[0] = screen[0]
-                sizes[1] = int(scale * sizes[1])
-        elif r0 > 0 and r1 <=0:
-            scale *= (screen[0] / float(sizes[0]))
-            sizes[0] = screen[0]
-            sizes[1] = int(scale * sizes[1])
-        elif r0 <= 0 and r1 > 0:
-            scale *= (screen[1] / float(sizes[1]))
-            sizes[1] = screen[1]
-            sizes[0] = int(scale * sizes[0])
-        else:
-            return frame
-
-        # newsize
-        # [宽，高]
-        sizes = tuple(reversed(sizes))
-        frame = cv2.resize(frame, sizes, interpolation=cv2.INTER_CUBIC)
-
-        self.scale = scale
-        return frame
-
 
 if __name__ == '__main__':
     # videoDir = r'F:\Users\Kingdom\Desktop\LabelSystem\VideoLabel-DF\videos' # 视频文件夹地址
@@ -751,7 +821,7 @@ if __name__ == '__main__':
             continue
 
         vl.video = video
-        vl.extractFrames(factor=sample_factor)
+        # vl.extractFrames(factor=sample_factor)
 
         vl.linethick = 1
         vl.lineHighThick = 3

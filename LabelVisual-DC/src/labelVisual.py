@@ -212,7 +212,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
-        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -303,9 +303,11 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\outputs\ld2.mp4\imgs'
-    xmldir = r'F:\Users\Kingdom\Desktop\GIT\LabelSystem\VideoLabel-DF\outputs\ld2.mp4\xmls'
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\move\imgs\2'
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\move\xmls\2'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
     labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
+
+

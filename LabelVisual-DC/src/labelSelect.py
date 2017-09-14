@@ -206,7 +206,7 @@ class labelSelect(labelVisual):
         labelVisual.__init__(self, imgDir, xmlDir, prefix_template, object_template, logname)
         # self.select()
 
-    def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir):
+    def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
         import shutil
 
         nameList = os.listdir(srcimgdir)
@@ -216,8 +216,9 @@ class labelSelect(labelVisual):
         #     nameIdx = int(logfile.read())
         #     logfile.close()
 
-        count = [0,[0,0,0],0] # {'nolabel', 'onelabel', 'mixedlabels'}
-        # while True:
+        # objectives = ['2', '5', '6']
+        count = [0, len(objectives) * [0], 0] # {'nolabel', 'onelabel', 'mixedlabels'}
+
         for nameIdx, _ in enumerate(nameList):
             if nameIdx >= len(nameList):  # nameIdx >= 0  and nameIdx <= len(nameList)
                 nameIdx = len(nameList) - 1
@@ -227,13 +228,7 @@ class labelSelect(labelVisual):
             name = nameList[nameIdx]  # load the picture and corresponding xml file
             imgname = os.path.join(srcimgdir, name)
             xmlname = os.path.join(srcxmldir, name[:-4] + '.xml')
-            # print xmlname
-
             flag = os.path.exists(imgname) and os.path.exists(xmlname)
-
-            if os.path.isfile(xmlname):
-                self.boxes = self.parseXml(xmlname) # boxes is list of list
-                # self.drawBoxes(self.boxes)
 
             '''
             no label 
@@ -241,62 +236,55 @@ class labelSelect(labelVisual):
             mixed labels 
             '''
             if flag:
-                if len(self.boxes) == 0:
-                    # shutil.copy(imgname, dstimgdir)
-                    # shutil.copy(xmlname, dstxmldir)
-                    # shutil.move(imgname, dstimgdir)
-                    # shutil.move(xmlname, dstxmldir)
+                xdstimgdir = ""
+                xdstxmldir = ""
 
+                self.boxes = self.parseXml(xmlname)  # boxes is list of list
+
+                if len(self.boxes) == 0:    # 无标签
                     count[0] += 1
-                    # raise Exception('Value Error! ')
-                elif len(self.boxes) == 1:
-                    if self.boxes[0][0] == '2': count[1][0] += 1
-                    if self.boxes[0][0] == '5': count[1][1] += 1
-                    if self.boxes[0][0] == '6': count[1][2] += 1
-
-                    # if condition: 
-                        # shutil.copy(imgname, dstimgdir)
-                        # shutil.copy(xmlname, dstxmldir)
-                        # shutil.move(imgname, dstimgdir)
-                        # shutil.move(xmlname, dstxmldir)
-
-                        # count[1] += 1
-                else:
+                    print count
+                else:                       # 有标签
                     label = self.boxes[0][0]
-                    check = 1
+                    check = 1               # 检查标签是否一致
                     for box in self.boxes:
-                        if box[0] != label: 
-                            check = 0 
+                        if box[0] != label:
+                            check = 0
                             break
-                    if check == 1: 
-                        if label == '2': count[1][0] += 1
-                        if label == '5': count[1][1] += 1
-                        if label == '6': count[1][2] += 1
-                            
-                        # if box[0] == '1' or box[0] != self.boxes[0][0]:
-                            # shutil.copy(imgname, dstimgdir)
-                            # shutil.copy(xmlname, dstxmldir)
-                            # shutil.move(imgname, dstimgdir)
-                            # shutil.move(xmlname, dstxmldir)
-                            # time.sleep(5)
+                    if check == 1:          # 只含有一个标签，或者含有多个标签且标签一致
+                        for i, obj in enumerate(objectives):
+                            if label == obj:
+                                count[1][i] += 1
+                                print count
+                                xdstimgdir = os.path.join(dstimgdir, obj)
+                                xdstxmldir = os.path.join(dstxmldir, obj)
+                    else:
+                        count[2] += 1       # 含有多个标签，且标签不一致
+                        print count
 
-                            # count[2] += 1
-                            # break
+                if xdstimgdir and xdstxmldir:
+                    if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
+                    if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
+                    shutil.copy(imgname, xdstimgdir)
+                    shutil.copy(xmlname, xdstxmldir)
+                    # shutil.move(imgname, xdstimgdir)
+                    # shutil.move(xmlname, xdstxmldir)
             else:
                 print "Invalid xmlname: %s"%xmlname
-                # do something
+                # raise Exception("Error")
         print count
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelled\imgs_batch_7'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelled\xmls_batch_7'
-    dstimgdir = r''
-    dstxmldir = r''
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\images'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\xmls_3hand_bk_20170818\xmls'
+    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\imgs'
+    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
+    objectives = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
-    ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir)
+    ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)
