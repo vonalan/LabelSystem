@@ -7,12 +7,17 @@ import cv2
 
 import workFrame as WF
 
+class WorkFrame(object):
+    def __init__(self):
+        self.check = False
+
 class VideoLabel(object): 
     def __init__(self, video): 
         '''global variables block'''
         self.labels = [str(i) for i in range(10)] 
         self.colors = [] 
-        self.flowLength = 30
+        self.flowLength = 1
+        self.frames = self.flowLength * [WorkFrame()]
 
         '''path related block'''
         self.video = video
@@ -23,8 +28,9 @@ class VideoLabel(object):
         self.FC = 0 # control F
         self.AC = 1 # control A 
         self.DC = 1 # control D 
-        self.UC = 1 # control update
-        self.XC = 1 # control delete
+        self.UC = 1 # control Update
+        self.XC = 1 # control Delete
+        self.CC = 0 # check_frame_flow
 
 
     def _update_output_dirs_(self): 
@@ -47,14 +53,25 @@ class VideoLabel(object):
             print("cv2.EVENT_RBUTTONDOWN", (x,y))
         else:
             print("None", (x,y))
-                
-    def label(self):
+
+    def check_frame_flow(self):
+        flag = 1
+        for frame in self.frames:
+            flag *= frame.check
+        self.CC = flag
+
+    def flow_rect(self):
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while (True): 
             key = cv2.waitKey(20)
-            if key in map(ord, self.labels): 
-                print(str(key-48)) 
+
+            if key in map(ord, self.labels):
+                print(str(key-48))
+
+            if key in map(ord, ['g','a','d']):
+                print('[G|A|D] -- Saving')
+
             if key == ord('g'):
                 if self.AC == 1 and self.DC == 1:
                     self.FC = 1 
