@@ -7,11 +7,21 @@ import numpy as np
 import cv2 
 
 
-class ImageReader(object):
-    pass
+class Image(object): 
+    def __init__(self, path=None): 
+        self.frame = self.read(path=path) 
+    
+    def read(self, path=None):
+        pass 
 
-class ImageWriter(object):
-    pass
+    def write(self, path=None): 
+        pass 
+
+    def show(self): 
+        pass 
+    
+    def rotate(self, frame=None, angle=0): 
+        pass 
 
 class VideoReader(object): 
     def __init__(self, sample_factor=6, mini_batch_size=20):
@@ -78,6 +88,3 @@ class VideoWriter(object):
         # cap.release()
         # out.release()
         # cv2.destroyAllWindows()
-
-
-
