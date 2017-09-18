@@ -243,6 +243,55 @@ class VideoLabel(object):
         infile.close()
         self.labelWidth = self.maxLabel * 10
 
+    def oriente(self, frame=None):
+        rotate = frame
+
+        count = 0
+        while True:
+            cv2.imshow('rotate', rotate)
+
+            key = cv2.waitKey(20)
+            if key == 32: # 空格
+                rotate = self.rotate(rotate, oriention=1)
+                count += 1
+                print count%4
+                continue
+            elif key == 27: break
+            else: pass
+        cv2.destroyAllWindows()
+        return count%4
+
+    def rotate(self, image=None, oriention=0):
+        assert len(image.shape) == 3
+        for i in range(oriention):
+            image = np.transpose(image, (1,0,2))
+            image = cv2.flip(image,1)
+        return image
+
+
+    def rotate_dev(self, image=None, angle=90):
+        height = image.shape[0]
+        width = image.shape[1]
+
+        if angle%180 == 0:
+            scale = 1
+        elif angle%90 == 0:
+            scale = float(max(height, width))/min(height, width)
+        else:
+            import math
+            scale = math.sqrt(pow(height,2)+pow(width,2))/min(height, width)
+
+        rheight = height/2
+        rwidth = width/2
+
+        rotateMat = cv2.getRotationMatrix2D((width/2, height/2), angle, scale)
+        rotateImg = cv2.warpAffine(image, rotateMat, (width, height))
+        # cv2.imshow('rotate', rotateImg)
+        # cv2.waitKey(0)
+
+        return rotateImg
+
+
     def resizeFrame(self, frame):
         # 显示器参数
         # [高，宽]
@@ -300,11 +349,17 @@ class VideoLabel(object):
         while (cap.isOpened()):
             ret, frame = cap.read()
             if ret == True:
+                if cnt == 0:
+                    print u'按空格键调整方向，按ESC退出'
+                    oriention = self.oriente(frame)
+                    print u'方向--%d, 解压图片'%oriention
+
                 if not (cnt + offset) % factor:
                     idx += 1
                     imgPath = os.path.join(self.outputimages, self.video + '_' + str(idx) + '.png')
                     frame = self.resizeFrame(frame)
                     # print frame.shape
+                    frame = self.rotate(frame, oriention)
                     cv2.imwrite(imgPath, frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -696,7 +751,7 @@ class VideoLabel(object):
             if key in map(ord, ['g', 'a', 'd']):
                 '''跳转帧之前，将当前帧写回缓冲区/磁盘'''
                 if self.SC == 1: #
-                    print('[G|A|D] -- Saving')
+                    # print('[G|A|D] -- Saving')
                     if len(self.storerects) and len(self.storeclses):
                         self.storerects[cur_idx] = copy.deepcopy(self.rects)
                         self.storeclses[cur_idx] = copy.deepcopy(self.classes)
@@ -706,7 +761,7 @@ class VideoLabel(object):
             if key == ord('g'):
                 # 'f', 调到下30帧
                 if self.dr == False and self.SC == 1:
-                    print("F")
+                    # print("F")
                     if self.storerects:
                         numFrames -= len(self.storerects)
                         # self.flush_storerects_2()
@@ -746,7 +801,7 @@ class VideoLabel(object):
                     # print 'Done! '
                     cur_idx = idx_itv[1] - 1
 
-                    print len(self.storerects), numFrames
+                    # print len(self.storerects), numFrames
 
             if key == 100:
                 # 'd', 进入下一张图片
@@ -765,7 +820,7 @@ class VideoLabel(object):
             if key == 97:
                 # 'a', 返回上一张图片
                 if self.fc == True and self.SC == 1:
-                    print("A")
+                    # print("A")
                     if self.dr == True:
                         # print 'Interpolating...',
                         self.update_storerects(self.storerects[idx_itv[0]], self.storerects[idx_itv[1] - 1], idx_itv[1])
@@ -830,30 +885,27 @@ if __name__ == '__main__':
             continue
 
         vl.video = video
-        # vl.extractFrames(factor=sample_factor)
+        vl.extractFrames(factor=sample_factor)
 
         vl.linethick = 1
         vl.lineHighThick = 3
         vl.length = 10  # 选择F键要跳转的帧数，debug使用
 
+        prompt = u"""
+标注图片
+F--跳帧
+A--插值|前一帧
+D--后一帧
+"""
+        print prompt
         vl.labelling()
 
         print '\n'
 
     '''
-    1. 画框前定位，需要加横竖两条辅助线。
-    4. 边框3像素改成1像素
-    5. "q"退出
-    6. "a"键和"f"键相互控制
-    7. "f"误触
-
     5. 空白键切换激活的Rect
     6. 方向键移动边
     7. 工作日志记录
-    8. 边框图片边缘溢出
-    9. 无法及时捕获边框
     10. 可以自由地添加或者删除边框, 使用list()替代dict()
-    11. 添加缩放工具
-    12. 添加旋转工具
-    13. 出现只有一帧时无法保存的尴尬情况
+    11. 重写数据结构
     '''
