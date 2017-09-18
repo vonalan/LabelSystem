@@ -187,14 +187,7 @@ class WorkFrame(object):
 
     def _initialize_frame_(self, nameList=None):
         frame = cv2.imread(self.name)
-        return frame
-
-    def update_all(self):
-        pass
-
-    def update_status(self, x=-1, y=-1, mouseFlag=0):
-        self.free_move(x, y)
-        self.mouseFlag = mouseFlag
+        return frame 
 
     def update_box_imgs(self, thick=None):
         self.boxImage = np.zeros((self.shape[0], self.shape[1])) - 1
@@ -343,6 +336,107 @@ class WorkFrame(object):
         if self.selectedX == 1: cmax.x = x
         if self.selectedY == 1: cmax.y = x
         ''''''
+
+    def draw_rect(self, event, x, y, flags, params):
+        '''mouse'''
+        if self.rightClick == 0: # ???
+            if event == cv2.EVENT_LBUTTONUP:
+                # print('LBUTTONUP', 'Flag:', self.mouseFlag, 'Rect:', self.choosedBox)
+                # 画框的左上角时self.rectFla为0，画到右下角时self.rectFlag为1
+                if self.mouseFlag == 0: # 0，自由；1，画框，2，移动框, 3, 移动边缘
+                    '''if F is pressed'''
+                    # if self.xc == 1:
+                    self.curBox.mainRect.min.update(x=x, y=y)
+                    self.mouseFlag = 1
+                    '''if F is pressed'''
+                elif self.mouseFlag == 1: # 画框
+                    self.mouseFlag = 0
+                    rect = self.curBox.mainRect
+                    cmin, cmax = rect.min, rect.max
+                    if abs(x - cmin.x) > self.minBox or abs(y - cmin.y) > self.minBox:
+                        self.rect_done(x, y)
+                    else:
+                        pass
+                        self.frame = copy.deepcopy(self.bufferframe)
+                    self.curBox = BBox()
+                elif self.mouseFlag == 2 or self.mouseFlag == 3:
+                    # 移动框，角结束
+                    self.mouseFlag = 0
+                    self.selectedX = -1
+                    self.selectedY = -1
+                    ''''''
+                    self.boxes[self.choosedBox].mainRect.check(shape=(self.shape[0], self.shape[1]))
+                    self.update_box_imgs()
+                    self.update_frame()
+                    ''''''
+            elif event == cv2.EVENT_MOUSEMOVE:
+                # 首先触发该事件，若不进行其他操作:self.free_move -> self.update_frame(不会有其他任何操作)
+                # print('EVENT_MOUSEMOVE', 'Flag:', self.mouseFlag, 'Rect:', self.choosedBox)
+                if self.mouseFlag == 1: # 正在画框
+                    self.frame = copy.deepcopy(self.bufferframe)
+                    self.update_frame(x, y)
+                elif self.mouseFlag == 0: # 鼠标自由移动
+                    ''''''
+                    rect = self.curBox.mainRect
+                    cmin, cmax = rect.min, rect.max
+                    print '自由...', [(self.choosedBox, self.choosedType), (self.selectedX, self.selectedY),
+                                    [(cmin.x, cmin.y), (cmax.x, cmax.y)], (x, y)]
+                    ''''''
+                    self.free_move(x, y)
+                elif self.mouseFlag == 2: # 移动框
+                    deltaX = x - self.startPos.x
+                    deltaY = y - self.startPos.y
+                    self.startPos.update(x=x, y=y)
+                    ''''''
+                    self.boxes[self.choosedBox].mainRect.move_all(deltaX=deltaX, deltaY=deltaY)
+                    rect = self.boxes[self.choosedBox].mainRect
+                    cmin, cmax = rect.min, rect.max
+                    # print [[cmin.x,cmin.y],[cmax.x,cmax.y]]
+                    self.boxes[self.choosedBox].mainRect.check(shape=(self.shape[0], self.shape[1]))
+                    ''''''
+                    self.update_box_imgs()
+                    self.update_frame()
+                elif self.mouseFlag == 3: # 移动角
+                    self.move_conner(x, y)
+                    self.update_box_imgs()
+                    self.update_frame(x, y)
+                else: pass
+            elif event == cv2.EVENT_LBUTTONDOWN:
+                # print('EVENT_LBUTTONDOWN', 'Flag:', self.mouseFlag, 'Rect:', self.choosedBox)
+                if self.mouseFlag == 0:
+                    if self.choosedBox >= 0:
+                        if self.choosedType == 0: # 移动框
+                            self.mouseFlag = 2
+                            self.startPos.update(x=x, y=y)
+                        elif self.choosedType == 1: # 移动角
+                            self.mouseFlag = 3
+                            self.select_conner(x, y)
+            elif event == cv2.EVENT_RBUTTONDOWN:
+                pass
+            elif event == cv2.EVENT_RBUTTONUP:
+                pass
+            else: pass
+        else: pass
+
+    def flow_rect(self):
+        '''keyboard'''
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback("image", self.draw_rect)
+        while True:
+            cv2.imshow('image', self.frame)
+            key = cv2.waitKey()
+
+            if key in map(ord, [str(i) for i in range(10)]):
+                if len(self.boxes)>0 and self.choosedBox >= 0:
+                    self.boxes[self.choosedBox].label = str(key-48)
+                    self.boxes[self.choosedBox].color = (0,255,0)
+                    self.update_box_imgs()
+                    self.update_frame()
+
+            self.update_box_imgs()
+            self.update_frame()
+            if key == 27: break
+        cv2.destroyAllWindows()
 
 class FrameBlock(object):
     def __init__(self, nameList=None):
