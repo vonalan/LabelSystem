@@ -265,10 +265,11 @@ class labelSelect(labelVisual):
                 if xdstimgdir and xdstxmldir:
                     if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
                     if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
-                    shutil.copy(imgname, xdstimgdir)
+                    # shutil.copy(imgname, xdstimgdir)
                     shutil.copy(xmlname, xdstxmldir)
                     # shutil.move(imgname, xdstimgdir)
                     # shutil.move(xmlname, xdstxmldir)
+                    pass
             else:
                 print "Invalid xmlname: %s"%xmlname
                 # raise Exception("Error")
@@ -276,15 +277,15 @@ class labelSelect(labelVisual):
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\images'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\xmls_3hand_bk_20170818\xmls'
+    srcimgdir = r'E:\Backups\Datasets\hand_dataset\images_3hand_bk_20170818\images'
+    srcxmldir = r'E:\Backups\Datasets\hand_dataset\xmls_3hand_bk_20170818\xmls'
     dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\imgs'
     dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
-    objectives = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+    objectives = ['2']
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)

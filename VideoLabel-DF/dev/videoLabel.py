@@ -7,12 +7,13 @@ import copy
 
 import workFrame as WF 
 WorkFrame = WF.WorkFrame
+BBox = WF.BBox
 Coordinate = WF.Coordinate
 
 
 class VideoLabel(WorkFrame): 
     def __init__(self, name=''):
-        super(VideoLabel_dev, self).__init__(name=name)
+        super(VideoLabel, self).__init__(name=name)
         
         self.wkFrames = None 
         self.curFrame = None 
@@ -161,6 +162,7 @@ class VideoLabel(WorkFrame):
             print(self.choosedBox, self.choosedType)
         else:
             self.choosedBox = -1
+        self.update_box_imgs()
         self.update_frame(x, y)
 
     def select_conner(self, x, y):
@@ -276,14 +278,15 @@ class VideoLabel(WorkFrame):
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow('image', self.frame)
+            cv2.imshow('boxImg', self.boxImage)
             key = cv2.waitKey()
 
             if key in map(ord, [str(i) for i in range(10)]):
                 if len(self.boxes)>0 and self.choosedBox >= 0:
                     self.boxes[self.choosedBox].label = str(key-48)
                     self.boxes[self.choosedBox].color = (0,255,0)
-                    self.update_box_imgs()
-                    self.update_frame()
+                    # self.update_box_imgs()
+                    # self.update_frame()
 
             self.update_box_imgs()
             self.update_frame()
@@ -291,4 +294,5 @@ class VideoLabel(WorkFrame):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    wf = WorkFrame('../images/test.png')
+    wf = VideoLabel('../images/test.png')
+    wf.flow_rect()
