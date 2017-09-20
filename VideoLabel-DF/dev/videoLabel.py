@@ -279,17 +279,21 @@ class VideoLabel(WorkFrame):
         while True:
             cv2.imshow('image', self.frame)
             cv2.imshow('boxImg', self.boxImage)
-            key = cv2.waitKey()
-
-            if key in map(ord, [str(i) for i in range(10)]):
-                if len(self.boxes)>0 and self.choosedBox >= 0:
-                    self.boxes[self.choosedBox].label = str(key-48)
-                    self.boxes[self.choosedBox].color = (0,255,0)
-                    # self.update_box_imgs()
-                    # self.update_frame()
 
             self.update_box_imgs()
-            self.update_frame()
+            self.update()
+
+            key = cv2.waitKey()
+            #
+            # if key in map(ord, [str(i) for i in range(10)]):
+            #     if len(self.boxes)>0 and self.choosedBox >= 0:
+            #         self.boxes[self.choosedBox].label = str(key-48)
+            #         self.boxes[self.choosedBox].color = (0,255,0)
+            #         # self.update_box_imgs()
+            #         # self.update_frame()
+
+            # self.update_box_imgs()
+            # self.update_frame()
             if key == 27: break
         cv2.destroyAllWindows()
 

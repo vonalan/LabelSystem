@@ -14,9 +14,15 @@ from collections import deque
 
 class FrameInfo(object):
     def __init__(self):
-        self.name = ''
-        self.checked = 0
-        self.boxes = ['', [[-1,-1], [-1,-1]]]
+        # self.name = ''
+
+        # frame = [name, checked, boxes]
+        # boxes = [box1, box2, ...]
+        # box = [label,[[xmin,ymin],[xmax,ymax]]]
+        # so
+        # frame = [name, checked, [label, [[xmin,ymin],[xmax,ymax]]], [label, [[xmin,ymin],[xmax,ymax]]]]
+        pass
+
 
 
 class VideoLabel(object):

@@ -82,6 +82,7 @@ class labelVisual:
     def _get_colors_(self): 
         colorList = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 66),
                      (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
+                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
                      (0, 122, 122), (122, 0, 122), (122, 122, 0)]
         return colorList
 
@@ -121,6 +122,7 @@ class labelVisual:
         if boxes is None:
             return
         for b, box in enumerate(boxes):
+            # print int(box[0]) - 1
             cv2.rectangle(self.frame, tuple(box[1:3]), tuple(box[3:]), self.colors[int(box[0])-1], thickness = 3)
             for i in range(30):
                 cv2.line(self.frame, (box[1], box[2]-i), (box [1]+40, box[2]-i), self.colors[int(box[0])-1], thickness = 1)
@@ -212,7 +214,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
-        # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -263,12 +265,18 @@ class labelVisual:
                 cv2.imshow("image", self.frame)
                 key = cv2.waitKey(20)
 
-                if self.selected >=0 and (key < 58 and key > 48 or key in list(map(ord, ['q','w','e','r']))): # {48:'0', ..., 57:'9', 58:':'}, change the label of gesture in the picture
-                    if key in list(map(ord, ['q','w','e','r'])):
+                if self.selected >=0 and (key < 58 and key > 48 or key in list(map(ord, ['q','w','e','r','t','y','u','i','o','p']))): # {48:'0', ..., 57:'9', 58:':'}, change the label of gesture in the picture
+                    if key in list(map(ord, ['q','w','e','r','t','y','u','i','o','p'])):
                         if key == ord('q'): key = 58
                         if key == ord('w'): key = 59
                         if key == ord('e'): key = 60
                         if key == ord('r'): key = 61
+                        if key == ord('t'): key = 62
+                        if key == ord('y'): key = 63
+                        if key == ord('u'): key = 64
+                        if key == ord('i'): key = 65
+                        if key == ord('o'): key = 66
+                        if key == ord('p'): key = 67
                     print str(key-48)
                     self.boxes[self.selected][0] = str(key-48) # 更改当前激活box的label
                     ''''''
@@ -303,11 +311,11 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\imgs'
-    xmldir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\xmls'
+    imgdir = r'D:\Users\Administrator\Desktop\LabelVisual-DC\imgs' # 图片文件夹地址
+    xmldir = r'D:\Users\Administrator\Desktop\LabelVisual-DC\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
-    logname = 'visual.log'
+    logname = 'visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
     labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
 
 
