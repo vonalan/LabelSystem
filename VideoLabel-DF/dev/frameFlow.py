@@ -21,7 +21,7 @@ class FrameFlow(object):
         self.labels = [str(i) for i in range(10)] 
         self.colors = [] 
         self.length = 1
-
+        
         self.nameList = []
 
         self.frameBlock = None
