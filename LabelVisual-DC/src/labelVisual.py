@@ -311,8 +311,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\LabelVisual-DC\imgs' # 图片文件夹地址
-    xmldir = r'D:\Users\Administrator\Desktop\LabelVisual-DC\xmls' # xml文件夹地址
+    imgdir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\imgs' # 图片文件夹地址
+    xmldir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2

@@ -12,102 +12,140 @@ import random
 import matplotlib.pyplot as plt
 from collections import deque
 
-class BBox(object): 
+class BBox(object):
     def __init__(self): 
         self.label = ''
         self.rect = [[-1,-1], [-1,-1]]
-    
-    def points(self): 
-        pass 
-    
-    def check(self): 
-        pass 
-    
-    def move(self): 
-        pass 
+
+    def move(self, deltaX, deltaY):
+        self.rect[0][0] += deltaX
+        self.rect[0][1] += deltaY
+        self.rect[1][0] += deltaX
+        self.rect[1][1] += deltaY
+
+    def check(self, minBox, shape):
+        '''
+        rect[0][0] >= 0 && rect[0][0] <= rect[1][0]
+        rect[0][1] >= 0 && rect[0][1] <= rect[1][1]
+        '''
+        if self.rect[0][0] > self.rect[1][0]:
+            self.rect[0][0], self.rect[1][0] = self.rect[1][0], self.rect[0][0]
+        if self.rect[0][1] > self.rect[1][1]:
+            self.rect[0][1], self.rect[1][1] = self.rect[1][1], self.rect[0][1]
+
+        def chk(pos, t, l):
+            if pos < t: pos = t
+            if pos > l: pos = l
+            return pos
+        self.rect[0][0] = chk(self.rect[0][0], 0, shape[1]-minBox)
+        self.rect[0][1] = chk(self.rect[0][1], 0, shape[0]-minBox)
+        self.rect[1][0] = chk(self.rect[1][0], 0+minBox, shape[1])
+        self.rect[1][1] = chk(self.rect[1][1], 0+minBox, shape[0])
+
+    def points(self):
+        pass
 
 class FrameInfo(object):
-    def __init__(self):
-        self.name = ''
+    def __init__(self, name):
+        self.name = name
         self.checked = 0
         self.boxes = []
 
 class VideoLabel(object):
-    def __init__(self, videoDir, imageDir, labelName, outputDir):
-        self.imgDir = ''
-        self.xmlDir = ''
-        self.vidDir = ''
-
-        self.rectFlag = 0
-        # 0，自由；1，画框，2，移动框, 3, 移动角
-
-        self.name = ''
-        self.checked = 0
-        self.boxes = []
-        self.curRect = []
-
-        self.frame = None 
-        self.bufframe = None 
-        self.boxImg = None 
-        self.shape = None 
-
-
-        
+    def __init__(self, video, inputDir, outputDir):
+        self.prefix_template = r'./template_prefix.xml'
+        self.object_template = r'./template_object.xml'
+        self.log = ''
 
         self.minBox = 10
-        self.pixDict = {}
-
         self.thick = 10
-        self.linethick = 3
-        self.lineHighThick = 5
+        self.linethick = 1
+        self.lineHighThick = 3
+        self.font = cv2.FONT_HERSHEY_SIMPLEX
+        self.fontsize = 1
 
-        self.chooseRect = -1
-        self.chooseType = -1  # 0,选框， 1， 选角， 2，选边
-        self.startPos = []
+        self.length = 10  # 按键F减可以往后跳10张图片
 
-        self.chooseXY = [-1, -1]
-        self.selectedX = -1
-        self.selectedY = -1
+        self.inputDir = inputDir
+        self.outputDir = outputDir
 
-        self.rightClick = 0  # ???
+        self.video = video
+        self.imgDir = ''
+        self.xmlDir = ''
 
-        # label 相关
         self.labels = []
         self.colors = []
 
+        self.name = ''
+        self.boxes = []
+        self.curRect = []
+        self.frame = None 
+        self.bufframe = None 
+        self.boxImg = None 
+        self.shape = None
+
+        self.nameList = []
+        self.storerects = []
+
+        self.rectFlag = 0 # 0，自由；1，画框，2，移动框, 3, 移动角
+        self.chooseRect = -1
+        self.chooseType = -1 # 0,选框， 1， 选角， 2，选边
+        self.startPos = []
+        self.chooseXY = [-1, -1]
+        self.selectedX = -1
+        self.selectedY = -1
+        self.rightClick = 0  # ???
+
         self.labelRect = -1
-        self.maxLabel = 0
-        # self.colorList = []
         self.labelHight = 20
         self.labelWidth = 0
-        # self.extractFrames()
-        self.parseLabel(labelName)
-        
 
-        self.length = 30  # 按键F减可以往后跳30张图片
-        self.font = cv2.FONT_HERSHEY_SIMPLEX  # 标注的字体样式
-        self.fontsize = 1  # 标注字体大小
-        self.key = deque(maxlen=1)  # 实现类别标注的相关设置（用于储存当前按键输入的类别）
+        self._get_labels_and_colors_()
+        self._update_dirs_()
+        self._get_name_list_()
 
-        self.prefix_template = r'./template_prefix.xml'  # 这两个是输出xml的相关设置
-        self.object_template = r'./template_object.xml'  # 
+    def _get_labels_and_colors_(self):
+        numbers = [str(i) for i in range(1,10)] # [1-9]
+        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o'] # [10-18]
 
-        self.inputDir = None
-        self.outputDir = outputDir
-        # self.outputimages_dbg = os.path.join(outputDir, 'images_dbg/')  # 输出images，为了调试方便
-        # self.outputimages = os.path.join(outputDir, 'images/')  # 输出images
-        # self.outputxmls = os.path.join(outputDir, 'xmls/')  # 输出xmls
+        labels = numbers + letters
+        colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255),
+                  (255, 255, 66),(0, 122, 122), (122, 0, 122),
+                  (122, 122, 0),(255, 0, 0), (0, 0, 255),
+                  (255, 255, 66), (0, 122, 122), (122, 0, 122),
+                  (122, 122, 0),(255, 0, 0), (0, 0, 255),
+                  (255, 255, 66),(0, 122, 122), (122, 0, 122)]
+        assert len(labels) == len(colors)
 
-        self.log = outputDir + '/outputlog.txt'  # 输出日志
-        self.record = None
-        self.rectsCopy = None
-        self.dr = False
-        self.fc = False
-        self.video = ''
-        self.scale = 1.0
-        self.gap = 25
-        self.SC = 0 # skip control
-        self.checked = 0
+        # label = str(labels.index(key))
+        # color = colors[labels.index(key)]
+        self.labels = labels
+        self.colors = colors
+
+    def _get_name_list_(self):
+        total = os.listdir(self.imgDir)
+        exist = [xml[:-4] + '.png' for xml in os.listdir(self.xmlDir)]
+        left = [img for img in total if img not in exist]
+        self.nameList = sorted(left, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        self.storerects = [FrameInfo(name) for name in self.nameList]
+        self.length = min(self.length, len(self.nameList))
+
+    def _update_dirs_(self):
+        self.dbgDir = os.path.join(self.outputDir, self.video, 'dbgs/')
+        self.imgDir = os.path.join(self.outputDir, self.video, 'imgs/')
+        self.xmlDir = os.path.join(self.outputDir, self.video, 'xmls/')
+
+        ''''''
+        import shutil
+        if os.path.exists(self.dbgDir): shutil.rmtree(self.dbgDir)
+        if os.path.exists(self.xmlDir): shutil.rmtree(self.xmlDir)
+        ''''''
+
+        if not os.path.exists(self.dbgDir): os.makedirs(self.dbgDir)
+        if not os.path.exists(self.imgDir): os.makedirs(self.imgDir)
+        if not os.path.exists(self.xmlDir): os.makedirs(self.xmlDir)
+
+        self.log = os.path.join(self.outputDir, video, 'output.log')
 
     # 输出xml方法，
     def writeXML(self, imgsize, names, boxes, outname):
@@ -135,53 +173,44 @@ class VideoLabel(object):
         outfile.write('</annotation>')
         outfile.close()
 
-    def writeRecord(self, strings):
-        log = open(self.record, 'a')
-        log.write(strings + '\n')
-        log.close()
-
     # 输出日志文件
     def writeLog(self, strings):
         log = open(self.log, 'a')
         log.write(strings + '\n')
         log.close()
 
-    def update_outputDir(self, video):
-        self.outputimages_dbg = os.path.join(self.outputDir, video, 'imgs_dbg/')
-        self.outputimages = os.path.join(self.outputDir, video, 'imgs/')
-        self.outputxmls = os.path.join(self.outputDir, video, 'xmls/')
-        self.log = os.path.join(self.outputDir, video, 'output.log')
-        self.record = os.path.join(self.outputDir, video, 'record.log')
 
-        if not os.path.exists(self.outputimages_dbg): os.makedirs(self.outputimages_dbg)
-        if not os.path.exists(self.outputimages): os.makedirs(self.outputimages)
-        if not os.path.exists(self.outputxmls): os.makedirs(self.outputxmls)
 
     # 画图片中的框，四个小角，类别，还有输出图片，xml，日志操作，所以不同于update_frame里面的相关部分
-    def draw_static(self, name, frame, shape, key, rects):
+    def draw_static(self, name, frame, shape, key, boxes):
         '''写入原图'''
         # cv2.imwrite(self.outputimages + name, frame)
 
         '''写入debug模式的图'''
-        for pts in rects:
+        for box in boxes:
+            pts = box.rect
             cv2.rectangle(frame, tuple(pts[0]), tuple(pts[1]), (0, 255, 0), thickness=self.linethick)
             points = [pts[0], pts[1], [pts[1][0], pts[0][1]], [pts[0][0], pts[1][1]]]
             for pt in points:
                 for th in range(self.thick):
                     cv2.rectangle(frame, (pt[0] - th, pt[1] - th), (pt[0] + th, pt[1] + th), (0, 255, 0),
                                   thickness=1)
-        for k, v in self.classes.items():
-            box = rects[k]
-            coord = (int((box[0][0] + box[1][0]) / 2), box[1][1])
-            cv2.putText(frame, str(v-48), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
-        cv2.imwrite(self.outputimages_dbg + name, frame)
+
+        for box in boxes:
+            if box.label:
+                label = box.label
+                rect = box.rect
+                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
+                            cv2.LINE_AA)
+        cv2.imwrite(self.dbgDir + name, frame)
 
         '''保存xml文件'''
-        # classes = list(map(chr, self.classes.values()))
-        classes = [str(v-48) for v in self.classes.values()]
-        boxes = [[item[0][0], item[0][1], item[1][0], item[1][1]] for item in rects]
+        labels = [box.label for box in boxes]
+        # rects = [[box.rect[0][0], box.rect[0][1], box.rect[1][0], box.rect[1][1]] for box in boxes]
+        rects = [box.rect[0] + box.rect[1] for box in boxes]
         try:
-            self.writeXML(shape, classes, boxes, self.outputxmls + name[:-4] + '.xml')
+            self.writeXML(shape, labels, rects, self.xmlDir + name[:-4] + '.xml')
         except IndexError:
             print('You forget label the category!')
 
@@ -192,24 +221,24 @@ class VideoLabel(object):
     # 因为有后退、后退30张、前进操作，每次操作都要更新name,frame,bufframe,shape
     def update(self, idx):
         self.name = self.storerects[idx].name
-        self.checked = self.storerects[idx].checked
+        # self.checked = self.storerects[idx].checked
         self.boxes = self.storerects[idx].boxes
 
-        imgname = os.path.join(self.outputimages, self.name)
+        imgname = os.path.join(self.imgDir, self.name)
         self.frame = cv2.imread(imgname)
         self.bufframe = copy.deepcopy(self.frame)
         self.shape = self.frame.shape
         self.chooseRect = -1
 
 
-    def update_storerects(self, sidx, eidx):
+    def update_storerects(self, sidx, eidx, step):
         sboxes = self.storerects[sidx].boxes
         eboxes = self.storerects[eidx].boxes
 
         sArray, eArray = [], []
         for sbox, ebox in zip(sboxes, eboxes):
             sArray.append(sbox.rect)
-            sArray.append(ebox.rect)
+            eArray.append(ebox.rect)
         sArray = np.array(sArray)
         eArray = np.array(eArray)
         dArray = (eArray - sArray)/float(eidx-sidx)
@@ -222,77 +251,11 @@ class VideoLabel(object):
         #         self.storerects[cidx].boxes[i].rect = clist
 
         # update one
-        cArray = (eArray + dArray * (eidx-1)).astype('int32')
+        cArray = (sArray + dArray * (eidx-sidx-1)).astype('int32')
+        cArray = cArray.tolist()
         for i, clist in enumerate(cArray):
             self.storerects[eidx-1].boxes[i].rect = clist
 
-
-    def update_storerects_1(self, rects0, rects1, numFrames):
-        # self.storerects = self.storerects[:idx_f - self.length]
-        self.storerects = []
-        for i in range(numFrames): # 最后一帧不用修改
-            curRects = []
-            for j in range(len(rects0)):
-                rect0, rect1 = np.array(rects0[j]), np.array(rects1[j])
-                rect_gap = (rect1 - rect0) / float(self.length)
-                rect_arr = (rect0 + rect_gap * i).astype('int32')
-                curRects.append([list(rect_arr[0]), list(rect_arr[1])])
-            self.storerects.append(curRects)
-
-    def flush_storerects_2(self, op_queue=None):
-        '''
-                将self.storerects从内存写如磁盘。
-                op_queue: operation_queue，用于一次性将所有operation写入磁盘
-                :return: None
-                '''
-
-        '''DBG'''
-        op_queue = {'name': ['a', 'a', 'f', 'f']}
-        key = op_queue['name'][0]
-        '''DBG'''
-
-        for idx in range(len(self.storerects)):
-            rects = self.storerects[idx]
-            name, self.frame, self.bufframe, self.shape = self.update(idx)
-            self.draw_static(name, self.frame, self.shape, key, rects)
-
-    def flush_storerects(self, op_queue=None):
-        '''
-        将self.storerects从内存写如磁盘。
-        op_queue: operation_queue，用于一次性将所有operation写入磁盘
-        :return: None
-        '''
-
-        '''DBG'''
-        op_queue = {'name': ['a', 'a', 'f', 'f']}
-        key = op_queue['name'][0]
-        '''DBG'''
-
-        for idx in range(len(self.storerects)):
-            rects = self.storerects[idx]
-            name, self.frame, self.bufframe, self.shape = self.update(idx)
-            self.draw_static(name, self.frame, self.shape, key, rects)
-
-    def parseLabel(self, inname):
-        infile = open(inname)
-        self.maxLabel = 0
-
-        colorList = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0)]
-        for i, line in enumerate(infile):
-            line = line.replace('\n', '')
-            lenlab = len(line)
-            if lenlab > self.maxLabel:
-                self.maxLabel = lenlab
-            # random.seed(i)
-            # self.colorList.append((random.randint(0,255), random.randint(0,255), random.randint(0,255)))
-            if len(line) > 0:
-                self.labels.append(line)  # string
-                self.colorList.append(colorList[i])
-        infile.close()
-        self.labelWidth = self.maxLabel * 10
 
     def oriente(self, frame=None):
         rotate = frame
@@ -312,35 +275,13 @@ class VideoLabel(object):
         cv2.destroyAllWindows()
         return count%4
 
+
     def rotate(self, image=None, oriention=0):
         assert len(image.shape) == 3
         for i in range(oriention):
             image = np.transpose(image, (1,0,2))
             image = cv2.flip(image,1)
         return image
-
-
-    def rotate_dev(self, image=None, angle=90):
-        height = image.shape[0]
-        width = image.shape[1]
-
-        if angle%180 == 0:
-            scale = 1
-        elif angle%90 == 0:
-            scale = float(max(height, width))/min(height, width)
-        else:
-            import math
-            scale = math.sqrt(pow(height,2)+pow(width,2))/min(height, width)
-
-        rheight = height/2
-        rwidth = width/2
-
-        rotateMat = cv2.getRotationMatrix2D((width/2, height/2), angle, scale)
-        rotateImg = cv2.warpAffine(image, rotateMat, (width, height))
-        # cv2.imshow('rotate', rotateImg)
-        # cv2.waitKey(0)
-
-        return rotateImg
 
 
     def resizeFrame(self, frame):
@@ -388,8 +329,8 @@ class VideoLabel(object):
         self.scale = scale
         return frame
 
-    def extractFrames(self, factor=6):
-        videoPath = os.path.join(self.videoDir, self.video)
+    def extract_frame(self, factor=6):
+        videoPath = os.path.join(self.vidDir, self.video)
         cap = cv2.VideoCapture(videoPath)
 
         # import random
@@ -407,7 +348,7 @@ class VideoLabel(object):
 
                 if not (cnt + offset) % factor:
                     idx += 1
-                    imgPath = os.path.join(self.outputimages, self.video + '_' + str(idx) + '.png')
+                    imgPath = os.path.join(self.imgDir, self.video + '_' + str(idx) + '.png')
                     frame = self.resizeFrame(frame)
                     # print frame.shape
                     frame = self.rotate(frame, oriention)
@@ -429,7 +370,8 @@ class VideoLabel(object):
     def update_boxImg(self):
         self.boxImg = np.zeros((self.shape[0], self.shape[1])) - 1 # -1
         th = self.thick
-        for i, pts in enumerate(self.boxes):
+        rects = [box.rect for box in self.boxes]
+        for i, pts in enumerate(rects):
             self.boxImg[pts[0][1]:pts[1][1], pts[0][0]:pts[1][0]] = i * 3
             # [y1:y2,x1:x2]
             points = [pts[0], pts[1], [pts[0][0], pts[1][1]], [pts[1][0], pts[0][1]]]
@@ -449,10 +391,11 @@ class VideoLabel(object):
         # print('rectFlat:%s, chooseRect:%s, rect_len:%s' % (self.rectFlag, self.chooseRect, len(self.boxes)))
         if self.rectFlag == 1:
             cv2.rectangle(self.frame, tuple(self.curRect[0]), (x, y), (0, 255, 0), thickness=self.linethick)
+            print tuple(self.curRect[0]), (x, y)
         if self.chooseRect >= 0:
             # print('updata_frame:', self.chooseType)
             # print self.chooseRect
-            points = self.boxes[self.chooseRect]
+            points = self.boxes[self.chooseRect].rect
             if self.chooseType == 0:
                 # 移动框
                 cv2.rectangle(self.frame, tuple(points[0]), tuple(points[1]), (255, 255, 255),
@@ -483,7 +426,8 @@ class VideoLabel(object):
                 pass
 
         # 画四角的小框以及大框
-        for i, pts in enumerate(self.boxes):
+        rects = [box.rect for box in self.boxes]
+        for i, pts in enumerate(rects):
             cv2.rectangle(self.frame, tuple(pts[0]), tuple(pts[1]), (0, 255, 0), thickness=self.linethick)
             points = [pts[0], pts[1], [pts[1][0], pts[0][1]], [pts[0][0], pts[1][1]]]
             # point = [[x1,y1],[x2,y2],[x2,y1],[x1,y2]
@@ -492,10 +436,13 @@ class VideoLabel(object):
                     cv2.rectangle(self.frame, (pt[0] - th, pt[1] - th), (pt[0] + th, pt[1] + th), (0, 255, 0),
                                   thickness=1)
         # 标注类别
-        for k, v in self.classes.items():
-            box = self.boxes[k]
-            coord = (int((box[0][0] + box[1][0]) / 2), box[1][1])
-            cv2.putText(self.frame, str(v-48), coord, self.font, self.fontsize, self.colorList[v - 48 - 1], 2, cv2.LINE_AA)
+        for box in self.boxes:
+            if box.label:
+                label = box.label
+                rect = box.rect
+                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
+                            cv2.LINE_AA)
 
     def rect_done(self, x, y):
         # 画框完毕
@@ -509,7 +456,10 @@ class VideoLabel(object):
             tmp = self.curRect[1][1]
             self.curRect[1][1] = self.curRect[0][1]
             self.curRect[0][1] = tmp
-        self.boxes.append(self.curRect)
+
+        curbox = BBox()
+        curbox.rect = self.curRect
+        self.boxes.append(curbox)
         self.update_boxImg()
         self.update_frame()
 
@@ -526,16 +476,6 @@ class VideoLabel(object):
             idx = int(num / 3)
             self.chooseRect = idx
             self.chooseType = num % 3
-
-            # print len(self.boxes), self.boxImg[y,x], self.chooseRect, self.chooseType
-
-
-            '''nothing to do'''
-            if len(self.key) == 1:
-                self.classes[self.chooseRect] = self.key[0]
-                self.key.pop()
-            '''nothing to do'''
-
         else:
             self.chooseRect = -1
 
@@ -543,7 +483,7 @@ class VideoLabel(object):
 
     def select_conner(self, x, y):
         self.startPos = [x, y]
-        points = self.boxes[self.chooseRect]
+        points = self.boxes[self.chooseRect].rect
         if abs(points[0][0] - x) <= self.thick:
             self.selectedX = 0
         else:
@@ -560,10 +500,9 @@ class VideoLabel(object):
         deltaY = y - self.startPos[1]
         self.startPos[0] = x
         self.startPos[1] = y
-        points = self.boxes[self.chooseRect] # points = [[xmin, ymin], [xmax, ymax]]
-        #        print deltaX, deltaY
-        points[self.selectedX][0] = x # reference
-        points[self.selectedY][1] = y # reference
+        self.boxes[self.chooseRect].rect[self.selectedX][0] = x
+        self.boxes[self.chooseRect].rect[self.selectedY][1] = y
+
 
         # print self.boxes[self.chooseRect], self.shape, (x,y)
 
@@ -580,10 +519,13 @@ class VideoLabel(object):
                     # self.rectFlag = 1
 
                     '''if F is pressed'''
-                    if self.xc == 1:
+                    if self.XC == 1:
                         self.curRect.append([x, y])
                         self.rectFlag = 1
                     '''if F is pressed'''
+
+                    # self.curRect.append([x, y])
+                    # self.rectFlag = 1
 
                 elif self.rectFlag == 1:
                     # 画框
@@ -598,39 +540,11 @@ class VideoLabel(object):
                     self.rectFlag = 0
                     self.selectedX = -1
                     self.selectedY = -1
-                    # self.update_boxImg()
 
                     '''边框溢出问题'''
-                    # min.x, max.x
-                    if self.boxes[self.chooseRect][0][0] > self.boxes[self.chooseRect][1][0]:
-                        self.boxes[self.chooseRect][0][0], self.boxes[self.chooseRect][1][0] = \
-                            self.boxes[self.chooseRect][1][0], self.boxes[self.chooseRect][0][0]
-                    # min.y, max.y
-                    if self.boxes[self.chooseRect][0][1] > self.boxes[self.chooseRect][1][1]:
-                        self.boxes[self.chooseRect][0][1], self.boxes[self.chooseRect][1][1] = \
-                            self.boxes[self.chooseRect][1][1], self.boxes[self.chooseRect][0][1]
-
-                    if self.boxes[self.chooseRect][0][0] < 0:
-                        # print "self.boxes[self.chooseRect][0][0] < 0"
-                        self.boxes[self.chooseRect][0][0] = 0
-                        self.boxes[self.chooseRect][1][0] = self.gap
-                    if self.boxes[self.chooseRect][0][1] < 0:
-                        # print "self.boxes[self.chooseRect][0][0] < 0"
-                        self.boxes[self.chooseRect][0][1] = 0
-                        self.boxes[self.chooseRect][1][1] = self.gap
-
-                    self.update_boxImg()
-
-                    '''update the last rects of storerects'''
-                    if self.storerects and self.dr == True:
-                        self.storerects[-1] = copy.deepcopy(self.boxes)
-                        # print 'Moving... '
-                        # print self.storerects[0],
-                        # print '-->',
-                        # print self.storerects[-1]
-                        # print '...',
-                        # print 'Done! '
-                    '''update the last rects of storerects'''
+                    # self.boxes[self.chooseRect].check()
+                    # self.update_boxImg()
+                    # self.update_frame()
 
             elif event == cv2.EVENT_MOUSEMOVE:
                 # 首先触发该事件，若不进行其他操作:self.free_move -> self.update_frame(不会有其他任何操作)
@@ -650,53 +564,18 @@ class VideoLabel(object):
                     self.startPos[1] = y
 
                     '''边框溢出问题'''
-                    # print self.boxes[self.chooseRect], self.shape, (x,y)
+                    self.boxes[self.chooseRect].move(deltaX, deltaY)
+                    self.boxes[self.chooseRect].check(self.minBox, self.shape)
+                    ''''''
 
-                    # gap = 10
-                    # min.x
-                    if self.boxes[self.chooseRect][0][0] < 0: # min.x
-                        self.boxes[self.chooseRect][0][0] = 0
-                    elif self.boxes[self.chooseRect][0][0] > self.shape[1] - self.gap:
-                        self.boxes[self.chooseRect][0][0] = self.shape[1] - self.gap
-                    else:
-                        self.boxes[self.chooseRect][0][0] += deltaX
-
-                    # min.y
-                    if self.boxes[self.chooseRect][0][1] < 0: # min.y
-                        self.boxes[self.chooseRect][0][1] = 0
-                    elif self.boxes[self.chooseRect][0][1] > self.shape[0] - self.gap:
-                        self.boxes[self.chooseRect][0][1] = self.shape[0] - self.gap
-                    else:
-                        self.boxes[self.chooseRect][0][1] += deltaY
-
-                    # max.x
-                    if self.boxes[self.chooseRect][1][0] < self.gap:  # max.x
-                        self.boxes[self.chooseRect][1][0] = self.gap
-                    elif self.boxes[self.chooseRect][1][0] > self.shape[1]:
-                        self.boxes[self.chooseRect][1][0] = self.shape[1]
-                    else:
-                        self.boxes[self.chooseRect][1][0] += deltaX
-
-                    # max.y
-                    if self.boxes[self.chooseRect][1][1] < self.gap:  # max.y
-                        self.boxes[self.chooseRect][1][1] = self.gap
-                    elif self.boxes[self.chooseRect][1][1] > self.shape[0]:
-                        self.boxes[self.chooseRect][1][1] = self.shape[0]
-                    else:
-                        self.boxes[self.chooseRect][1][1] += deltaY
-                    '''边框溢出问题'''
-
-                    # self.boxes[self.chooseRect][0][0] += deltaX
-                    # self.boxes[self.chooseRect][1][0] += deltaX
-                    # self.boxes[self.chooseRect][0][1] += deltaY
-                    # self.boxes[self.chooseRect][1][1] += deltaY
                     self.update_boxImg()
                     self.update_frame()
                 elif self.rectFlag == 3:
                     # 移动角
                     self.move_conner(x, y)
+                    self.boxes[self.chooseRect].check(self.minBox, self.shape)
                     self.update_boxImg()
-                    self.update_frame(x, y)
+                    self.update_frame()
 
             elif event == cv2.EVENT_LBUTTONDOWN:
                 # print('LBUTTONDOWN', self.rectFlag, self.chooseRect)
@@ -720,171 +599,158 @@ class VideoLabel(object):
             #     # key = cv2.waitKey()
             #     # cv2.putText(self.frame, chr(key), self.boxes[self.chooseRect][0], cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,255), 3)
             #     pass
-        else: pass
 
     def labelling(self):
         import time
 
-        self.xc = 1
+        self.AC = 0  # A
+        self.FC = 0  # F
+        self.XC = 1  # insert | delete
+        self.SC = 1  # skip control
 
-        '''准备工作'''
-        existname = [xml[:-4] + '.png' for xml in os.listdir(self.outputxmls)]
-        storename = os.listdir(self.outputimages)
-        self.storename = [img for img in storename if img not in existname]
-        self.storename = sorted(self.storename, key = lambda x : int((x.split('.')[1]).split('_')[1]))
-        numFrames = len(self.storename)
-        for name in self.storename:
-            info = FrameInfo()
-            self.storerects.append(info)
+        self.video = ''
+        self.scale = 1.0
 
+        # self.checked = 0
 
-
-        '''确保每一帧被检查过才能进行窗口移动'''
-        # self.check = 0
-        # self.storecheck = []
-
-        sidx, eidx, cidx = 0, 0, 0
-
-        idx_itv = [0,self.length]
-        cur_idx = 0
+        sidx, eidx, cidx = -self.length, 0, 0
 
         self.update(0)
+        self.update_boxImg()
 
         # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
+            # cv2.imshow("boxes", self.boxImg)
             key = cv2.waitKey(20)
+
+            self.SC = 1
+            for box in self.boxes:
+                if not box.label:
+                    self.SC = 0
+                    break
 
             if key == ord('x'):
                 '''由于需要插值，故而F键锁定删除与插入，A键解除锁定'''
                 if len(self.boxes) and self.chooseRect >= 0:
-                    if self.xc == 1:
+                    if self.XC == 1:
                         del self.boxes[self.chooseRect]
+                        self.chooseRect = -1
                         self.update_boxImg()
                         self.update_frame()
 
-            '''准备工作'''
-            extraLabels = ['q','w','e','r','t','y','u','i','o','p']
-            if key in [int(label)+48 for label in self.labels] + list(map(ord, extraLabels)):
-                for i, label in enumerate(extraLabels):
-                    if key == ord(label): key = 58 + i
+            if key in [ord(label) for label in self.labels]:
+                print key
 
                 if len(self.boxes) and self.chooseRect >= 0:
-                    self.boxes[self.chooseRect].label = key
+                    self.boxes[self.chooseRect].label = str(self.labels.index(chr(key)) + 1)
                     self.update_boxImg()
                     self.update_frame()
 
             if key in map(ord, ['g', 'a', 'd']):
-                if self.SC == 1: #
-                    if self.fc == True: self.checked = 1
-                    if len(self.storerects):
-                        self.storerects[cur_idx].name = self.name
-                        self.storerects[cur_idx].checked = self.checked
-                        self.storerects[cur_idx].boxes = copy.deepcopy(self.boxes)
+                if self.SC == 1:  #
+                    # if self.FC == 1: self.checked = 1
+                    # self.checked = 1
+                    self.storerects[cidx].name = self.name
+                    self.storerects[cidx].checked = 1
+                    self.storerects[cidx].boxes = copy.deepcopy(self.boxes)
                     self.draw_static(self.name, self.frame, self.shape, key, self.boxes)
 
-            if key == ord('G'):
-                pass
+            # if key == ord('G'):
+            #     if self.AC == 0 and self.SC == 1:
+            #         ''''''
+            #         eidx = sidx
+            #         sidx = max(sidx - self.length, 0)
+            #         ''''''
+            #
+            #         if sidx >= eidx:
+            #             # self.writeRecord(self.video)
+            #             break
 
             if key == ord('g'):
-                if self.dr == False and self.SC == 1:
+                if self.AC == 0 and self.SC == 1:
                     ''''''
-                    sidx += self.length
+                    sidx = eidx
                     eidx = min(eidx + self.length, len(self.storerects))
                     ''''''
 
-                    if sidx > eidx:
-                        self.writeRecord(self.video)
+                    if sidx >= eidx:
+                        # self.writeRecord(self.video)
                         break
 
-                    self.dr = True
-                    self.fc = True
-                    self.xc = 0
+                    self.AC = 1
+                    self.FC = 1
+                    self.XC = 0
 
+                    # not necessary
+                    for idx in range(sidx, eidx):
+                        # self.storerects[idx].name = self.name
+                        self.storerects[idx].checked = 0
+                        self.storerects[idx].boxes = copy.deepcopy(self.boxes)
 
-                    # for idx in range(sidx, eidx):
-                    #     self.storerects[idx].name = self.name
-                    #     self.storerects[idx].checked = self.checked
-                    #     self.storerects[idx].boxes = copy.deepcopy(self.boxes)
-                    #
-                    #     print('F -- idx: %s, idx_f: %s, op_name: %s' % (cur_idx, idx_itv[1], self.name))
-                    #     self.writeLog(str(self.name) + ' , ' + chr(key))
+                        self.name = self.nameList[idx]
+                        print('F --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (idx, sidx, eidx, self.name))
+                        # self.writeLog(str(self.name) + ' , ' + chr(key))
 
                     cidx = eidx - 1
+                    self.name = self.nameList[cidx]
+                    print('F --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+
+                    self.update(cidx)
+                    self.update_boxImg()
+                    self.update_frame()
 
             if key == ord('d'):
-                if self.fc == True and self.SC == 1:
+                if self.FC == 1 and self.SC == 1:
+                    # # for symmetry
                     # if self.storerects[cidx+1].checked == 0:
                     #     self.update_storerects(eidx, cidx, -1)
 
-                    cidx = min(cidx+1, sidx)
-                    print('D -- idx: %s, idx_f: %s, op_name: %s' % (cidx, eidx, self.name))
-                    self.writeLog(str(self.name) + ' , ' + chr(key))
+                    cidx = min(cidx+1, eidx-1)
+                    self.name = self.nameList[cidx]
+                    print('D --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+                    # self.writeLog(str(self.name) + ' , ' + chr(key))
+
+                    self.update(cidx)
+                    self.update_boxImg()
+                    self.update_frame()
 
             if key == ord('a'):
-                if self.fc == True and self.SC == 1:
-                    if self.storerects[cidx-1].checked == 0:
-                        self.update_storerects(sidx, cidx)
+                if self.FC == 1 and self.SC == 1:
+                    '''to update the previous frame'''
+                    if cidx-1 > sidx and self.storerects[cidx-1].checked == 0:
+                        self.update_storerects(sidx, cidx, 1)
 
                     cidx = max(cidx - 1, sidx)
-                    print('D -- idx: %s, idx_f: %s, op_name: %s' % (cidx, eidx, self.name))
-                    self.writeLog(str(self.name) + ' , ' + chr(key))
+                    self.name = self.nameList[cidx]
+                    print('A --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+                    # self.writeLog(str(self.name) + ' , ' + chr(key))
 
-            self.update(cidx)
-            self.update_boxImg()
-            self.update_frame()
+                    self.update(cidx)
+                    self.update_boxImg()
+                    self.update_frame()
 
+                    self.AC = 0
+                    self.XC = 1
         cv2.destroyAllWindows()
         time.sleep(1)
 
 if __name__ == '__main__':
-    videoDir = r'../videos'  # 视频文件夹地址
-    imageDir = r'../images'  # 不用设置
-    outputDir = r'../outputs'  # images和xmls输出地址
-    labelName = r'./labels.txt'
+    inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
+    outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
 
-    '''settings'''
-    sample_factor = 6  # 每6帧抽取一帧
-    '''settings'''
-
-    videoList = os.listdir(videoDir)
+    videoList = os.listdir(inputDir)
     for video in videoList:
-        videoPath = os.path.join(videoDir, video)
+        videoPath = os.path.join(inputDir, video)
 
         print videoPath
-        vl = VideoLabel(videoDir, imageDir, labelName, outputDir)
-
-        '''self.record 要完成一个视频才会保存下来，所以可以用来判断'''
-        vl.update_outputDir(video)
-
-        import shutil
-        shutil.rmtree(vl.outputxmls)
-        os.mkdir(vl.outputxmls)
-
-        if (os.path.exists(vl.record)):
-            print '\n'
-            continue
-
-        vl.video = video
-        # vl.extractFrames(factor=sample_factor)
-
-        vl.linethick = 1
-        vl.lineHighThick = 3
-        vl.length = 10  # 选择F键要跳转的帧数，debug使用
-
-        prompt = u"""
-标注图片
-F--跳帧
-A--插值|前一帧
-D--后一帧
-"""
-        print prompt
+        vl = VideoLabel(video, inputDir, outputDir)
+        # vl.extract_frame()
+        vl._update_dirs_()
+        vl.length = 5
         vl.labelling()
-
-        print '\n'
-
     '''
     5. 空白键切换激活的Rect
     6. 方向键移动边

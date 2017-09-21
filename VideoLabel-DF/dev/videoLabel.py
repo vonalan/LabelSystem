@@ -281,7 +281,7 @@ class VideoLabel(WorkFrame):
             cv2.imshow('boxImg', self.boxImage)
 
             self.update_box_imgs()
-            self.update()
+            # self.update()
 
             key = cv2.waitKey()
             #
