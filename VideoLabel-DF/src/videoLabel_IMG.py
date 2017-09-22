@@ -13,9 +13,10 @@ import matplotlib.pyplot as plt
 from collections import deque
 
 class BBox(object):
-    def __init__(self): 
+    def __init__(self):
+        # self.id = -1
+        # self.visible = 1
         self.label = ''
-        self.visible = 1
         self.rect = [[-1,-1], [-1,-1]]
 
     def move(self, deltaX, deltaY):
@@ -56,7 +57,6 @@ class VideoLabel(object):
     def __init__(self, video, inputDir, outputDir):
         self.prefix_template = r'./template_prefix.xml'
         self.object_template = r'./template_object.xml'
-        self.log = ''
 
         self.minBox = 10
         self.thick = 10
@@ -102,8 +102,10 @@ class VideoLabel(object):
         self.labelHight = 20
         self.labelWidth = 0
 
+        # get ready
         self._get_labels_and_colors_()
         self._update_dirs_()
+        self._extract_frame_()
         self._get_name_list_()
 
     def _get_labels_and_colors_(self):
@@ -137,17 +139,19 @@ class VideoLabel(object):
         self.imgDir = os.path.join(self.outputDir, self.video, 'imgs/')
         self.xmlDir = os.path.join(self.outputDir, self.video, 'xmls/')
 
-        '''for debug'''
-        import shutil
-        if os.path.exists(self.dbgDir): shutil.rmtree(self.dbgDir)
-        if os.path.exists(self.xmlDir): shutil.rmtree(self.xmlDir)
-        '''for debug'''
+        # '''for debug'''
+        # import shutil
+        # if os.path.exists(self.dbgDir): shutil.rmtree(self.dbgDir)
+        # if os.path.exists(self.xmlDir): shutil.rmtree(self.xmlDir)
+        # '''for debug'''
 
         if not os.path.exists(self.dbgDir): os.makedirs(self.dbgDir)
         if not os.path.exists(self.imgDir): os.makedirs(self.imgDir)
         if not os.path.exists(self.xmlDir): os.makedirs(self.xmlDir)
 
-        self.log = os.path.join(self.outputDir, video, 'output.log')
+        # self.opSeqLog = os.path.join(self.outputDir, video, 'operationSequence.log')
+        self.extractDoneLog = os.path.join(self.outputDir, video, 'extractFrameDone.log')
+        # self.labelDoneLog = os.path.join(self.outputDir, video, 'labellingDone.log')
 
     # 输出xml方法，
     def writeXML(self, imgsize, names, boxes, outname):
@@ -176,8 +180,8 @@ class VideoLabel(object):
         outfile.close()
 
     # 输出日志文件
-    def writeLog(self, strings):
-        log = open(self.log, 'a')
+    def writeLog(self, logname, strings):
+        log = open(logname, 'a')
         log.write(strings + '\n')
         log.close()
 
@@ -234,9 +238,11 @@ class VideoLabel(object):
         sboxes = self.storerects[sidx].boxes
         eboxes = self.storerects[eidx].boxes
 
-        # if len(sboxes) != len(eboxes):
-        #     self.storerects[eidx-1].boxes = eboxes
-        #     return
+        ''''''
+        if len(sboxes) != len(eboxes):
+            self.storerects[eidx-1].boxes = copy.deepcopy(eboxes)
+            return
+        ''''''
 
         sArray, eArray = [], []
         for sbox, ebox in zip(sboxes, eboxes):
@@ -284,7 +290,11 @@ class VideoLabel(object):
         cv2.destroyAllWindows()
         return count%4
 
-    def extract_frame(self, factor=6):
+    def _extract_frame_(self, factor=6):
+        if os.path.exists(self.extractDoneLog):
+            print u'方向--%d, 抽取图片...' %0
+            return
+
         videoPath = os.path.join(self.inputDir, self.video)
         cap = cv2.VideoCapture(videoPath)
 
@@ -299,7 +309,7 @@ class VideoLabel(object):
                 if cnt == 0:
                     print u'按空格键调整方向，按ESC退出'
                     oriention = self.reorient(frame)
-                    print u'方向--%d, 解压图片...'%oriention
+                    print u'方向--%d, 抽取图片...'%oriention
 
                 if not (cnt + offset) % factor:
                     idx += 1
@@ -312,6 +322,8 @@ class VideoLabel(object):
             else:
                 break
         cap.release()
+
+        self.writeLog(self.extractDoneLog, '%d'%(idx))
 
     def draw_circle(self, event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -341,7 +353,7 @@ class VideoLabel(object):
         # print('rectFlat:%s, chooseRect:%s, rect_len:%s' % (self.rectFlag, self.chooseRect, len(self.boxes)))
         if self.rectFlag == 1:
             cv2.rectangle(self.frame, tuple(self.curRect[0]), (x, y), (0, 255, 0), thickness=self.linethick)
-            print tuple(self.curRect[0]), (x, y)
+            # print tuple(self.curRect[0]), (x, y)
         if self.chooseRect >= 0:
             points = self.boxes[self.chooseRect].rect
             if self.chooseType == 0:
@@ -461,19 +473,8 @@ class VideoLabel(object):
                 # 画框的左上角时self.rectFla为0，画到右下角时self.rectFlag为1
                 if self.rectFlag == 0:
                     # 0，自由；1，画框，2，移动框, 3, 移动边缘
-                    # self.curRect.append([x, y])
-                    # [x,y]为event触发时的坐标
-                    # self.rectFlag = 1
-
-                    '''if F is pressed'''
-                    if self.XC == 1:
-                        self.curRect.append([x, y])
-                        self.rectFlag = 1
-                    '''if F is pressed'''
-
-                    # self.curRect.append([x, y])
-                    # self.rectFlag = 1
-
+                    self.curRect.append([x, y])
+                    self.rectFlag = 1
                 elif self.rectFlag == 1:
                     # 画框
                     self.rectFlag = 0
@@ -542,90 +543,97 @@ class VideoLabel(object):
     def labelling(self):
         import time
 
+        self.DC = 0  # D
         self.AC = 0  # A
         self.FC = 0  # F
-        self.XC = 1  # insert | delete
-        self.SC = 1  # skip control
+        # self.HC = 0  # H
+        self.SC = 1  # [A|D|G|H|ESC]
+        self.MC = 1  # [G|H]
+        self.TC = 1  # [ESC]
 
         sidx, eidx, cidx = -self.length, 0, 0
 
         self.update(0)
-        # self.update_boxImg()
 
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
-            # cv2.imshow("boxes", self.boxImg)
             key = cv2.waitKey(20)
 
-            self.SC = 1
-            for box in self.boxes:
-                if not box.label:
-                    self.SC = 0
-                    break
+            self.SC = reduce(lambda x, y: x * y, [len(box.label) for box in self.boxes], 1)
+            # self.MC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects[sidx:eidx]])
+            # self.TC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects])
 
-            if key == ord('x'):
-                '''由于需要插值，故而F键锁定删除与插入，A键解除锁定'''
+            if key == ord('x'): # delete bbox
                 if len(self.boxes) and self.chooseRect >= 0:
-                    if self.XC == 1:
-                        del self.boxes[self.chooseRect]
-                        self.chooseRect = -1
-                        self.update_boxImg()
-                        self.update_frame()
+                    del self.boxes[self.chooseRect]
+                    self.chooseRect = -1
+                    self.update_boxImg()
+                    self.update_frame()
 
-            if key in [ord(label) for label in self.labels]:
+            if key in [ord(label) for label in self.labels]: # add label
                 if len(self.boxes) and self.chooseRect >= 0:
                     self.boxes[self.chooseRect].label = str(self.labels.index(chr(key)) + 1)
                     self.update_boxImg()
                     self.update_frame()
 
-            if key in map(ord, ['g', 'a', 'd']):
+            if key in map(ord, ['g', 'G', 'a', 'd'])+[27]:
                 if self.SC == 1:  #
                     self.storerects[cidx].name = self.name
                     self.storerects[cidx].checked = 1
                     self.storerects[cidx].boxes = copy.deepcopy(self.boxes)
                     self.draw_static(self.name, self.frame, self.shape, key, self.boxes)
 
-            # if key == ord('G'):
-            #     if self.AC == 0 and self.SC == 1:
-            #         ''''''
-            #         eidx = sidx
-            #         sidx = max(sidx - self.length, 0)
-            #         ''''''
-            #
-            #         if sidx >= eidx:
-            #             # self.writeRecord(self.video)
-            #             break
-
-            if key == ord('g'):
-                if self.AC == 0 and self.SC == 1:
-                    sidx = eidx
-                    eidx = min(eidx + self.length, len(self.storerects))
-
-                    if sidx >= eidx:
-                        break
-
-                    self.AC = 1
-                    self.FC = 1
-                    self.XC = 0
+            if key == ord('h'): # 回退30帧
+                if self.DC == 0 and self.SC == 1:
+                    if sidx > 0:
+                        eidx = sidx
+                        sidx = max(sidx - self.length, 0)
+                    else: continue
 
                     for idx in range(sidx, eidx):
-                        # self.storerects[idx].name = self.name
-                        self.storerects[idx].checked = 0
-                        self.storerects[idx].boxes = copy.deepcopy(self.boxes)
-
                         self.name = self.nameList[idx]
-                        print('F --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (idx, sidx, eidx, self.name))
+                        print('H --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (idx, sidx, eidx, self.name))
                         # self.writeLog(str(self.name) + ' , ' + chr(key))
 
-                    cidx = eidx - 1
+                    cidx = sidx
                     self.name = self.nameList[cidx]
-                    print('F --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+                    print('H --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
 
                     self.update(cidx)
                     self.update_boxImg()
                     self.update_frame()
+
+                    self.DC = 1
+
+            if key == ord('g'): # 前进30帧
+                if self.AC == 0 and self.SC == 1:
+                    if eidx < len(self.storerects):
+                        sidx = eidx
+                        eidx = min(eidx + self.length, len(self.storerects))
+                    else: continue
+
+                    for idx in range(sidx, eidx):
+                        if self.storerects[idx].checked == 0:
+                            # self.storerects[idx].name = self.name
+                            self.storerects[idx].checked = 0
+                            self.storerects[idx].boxes = copy.deepcopy(self.boxes)
+
+                        self.name = self.nameList[idx]
+                        print('G --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (idx, sidx, eidx, self.name))
+                        # self.writeLog(str(self.name) + ' , ' + chr(key))
+
+                    cidx = eidx - 1
+                    self.name = self.nameList[cidx]
+                    print('G --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+
+                    self.update(cidx)
+                    self.update_boxImg()
+                    self.update_frame()
+
+                    self.AC = 1
+                    self.FC = 1
 
             if key == ord('d'):
                 if self.FC == 1 and self.SC == 1:
@@ -641,6 +649,8 @@ class VideoLabel(object):
                     self.update(cidx)
                     self.update_boxImg()
                     self.update_frame()
+
+                    self.DC = 0
 
             if key == ord('a'):
                 if self.FC == 1 and self.SC == 1:
@@ -658,16 +668,25 @@ class VideoLabel(object):
                     self.update_frame()
 
                     self.AC = 0
-                    self.XC = 1
+
+            if key == 27: # ESC
+                checkList = [idx for idx, wf in enumerate(self.storerects) if wf.checked == 0]
+                if len(checkList):
+                    cidx = checkList[-1]
+                    self.name = self.nameList[cidx]
+                    print('ESC --idx: %s, sidx: %s, eidx: %s, op_name: %s' % (cidx, sidx, eidx, self.name))
+                    # self.writeLog(str(self.name) + ' , ' + chr(key))
+                    self.update(cidx)
+                    self.update_boxImg()
+                    self.update_frame()
+                    continue
+                break
         cv2.destroyAllWindows()
         time.sleep(1)
 
 if __name__ == '__main__':
-    # inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
-    # outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
-
-    inputDir = r'../videos'  # 视频文件夹地址
-    outputDir = r'../outputs'  # images和xmls输出地址
+    inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
+    outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
 
     videoList = os.listdir(inputDir)
     for video in videoList:
@@ -675,13 +694,30 @@ if __name__ == '__main__':
         print videoPath
 
         vl = VideoLabel(video, inputDir, outputDir)
-        vl._update_dirs_()
-        # vl.extract_frame()
         vl.length = 5
+
+        if not len(vl.storerects):
+            print u'视频标注完成^_^'
+            continue
+
+        prompt = \
+u'''
+g --------- 前进%d帧
+h --------- 回退%d帧
+a --------- 上一帧
+d --------- 下一帧
+esc ------- （完成后）退出。
+ctrl+c ---- 强制退出。（命令行窗口才有效。）
+'''%(vl.length, vl.length)
+        print prompt
+
         vl.labelling()
+
+        print u'视频标注完成^_^'
 
     '''
     5. 空白键切换激活的Bbox, 方向键移动边和框
     11. 重写数据结构
     12. 与标签检查工具合并
+    13. 重新设计box数目不一致时的插值方法
     '''
