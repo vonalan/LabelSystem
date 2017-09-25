@@ -220,10 +220,10 @@ class labelSelect(labelVisual):
         count = [0, len(objectives) * [0], 0] # {'nolabel', 'onelabel', 'mixedlabels'}
 
         for nameIdx, _ in enumerate(nameList):
-            if nameIdx >= len(nameList):  # nameIdx >= 0  and nameIdx <= len(nameList)
-                nameIdx = len(nameList) - 1
-            if nameIdx < 0:
-                nameIdx = 0
+            # if nameIdx >= len(nameList):  # nameIdx >= 0  and nameIdx <= len(nameList)
+            #     nameIdx = len(nameList) - 1
+            # if nameIdx < 0:
+            #     nameIdx = 0
 
             name = nameList[nameIdx]  # load the picture and corresponding xml file
             imgname = os.path.join(srcimgdir, name)
@@ -266,26 +266,27 @@ class labelSelect(labelVisual):
                     if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
                     if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
                     # shutil.copy(imgname, xdstimgdir)
-                    shutil.copy(xmlname, xdstxmldir)
-                    # shutil.move(imgname, xdstimgdir)
-                    # shutil.move(xmlname, xdstxmldir)
+                    # shutil.copy(xmlname, xdstxmldir)
+                    shutil.move(imgname, xdstimgdir)
+                    shutil.move(xmlname, xdstxmldir)
                     pass
             else:
-                print "Invalid xmlname: %s"%xmlname
+                count[0] += 1
+                # print "Invalid xmlname: %s"%xmlname
                 # raise Exception("Error")
         print count
 
 
 if __name__ == '__main__':
-    srcimgdir = r'E:\Backups\Datasets\hand_dataset\images_3hand_bk_20170818\images'
-    srcxmldir = r'E:\Backups\Datasets\hand_dataset\xmls_3hand_bk_20170818\xmls'
-    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\imgs'
-    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\copy\xmls'
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelled\imgs_batch_7'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelled\xmls_batch_7'
+    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\move\imgs'
+    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\move\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
-    objectives = ['2']
+    objectives = [str(i+1) for i in range(20)]
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)

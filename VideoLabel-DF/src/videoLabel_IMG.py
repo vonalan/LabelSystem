@@ -265,6 +265,46 @@ class VideoLabel(object):
         for i, clist in enumerate(cArray):
             self.storerects[eidx-1].boxes[i].rect = clist
 
+    # class imageExtractor(video=None):
+    #     def __init__(self):
+    #         pass
+    #     def extract(self):
+    #         pass
+    #     def rotate(self):
+    #         pass
+    #     def resize(self):
+    #         pass
+
+    def resize(self, frame=None, scale=None):
+        '''
+        to substitute
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
+        for user experience
+        '''
+        # (544,960) or
+        # (960,544)
+
+        orishape = (frame.shape[0], frame.shape[1])
+        objshape = (544, 960) if orishape[0] < orishape[1] else (960, 544)
+
+        ''''''
+        if scale is not None:
+            objshape = map(lambda x: int(x * scale), orishape)
+            resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+            return scale, resizeFrame
+        ''''''
+
+        r0 = objshape[0] / float(orishape[0])
+        r1 = objshape[1] / float(orishape[1])
+        scale = max(r0, r1)
+
+        resizeFrame = frame
+        if scale < 1.0:
+            objshape = map(lambda x: int(x * scale), orishape)
+            resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+
+        return scale, resizeFrame
+
     def rotate(self, image=None, oriention=0):
         assert len(image.shape) == 3
         for i in range(oriention):
@@ -272,28 +312,38 @@ class VideoLabel(object):
             image = cv2.flip(image,1)
         return image
 
+    def rotate_dev(self):
+        pass
+
     def reorient(self, frame=None):
-        rotate = frame
+        rotatedImage = frame
+        scale, rotatedImage = self.resize(rotatedImage)
 
         count = 0
         while True:
-            cv2.imshow('rotate', rotate)
+            cv2.imshow('rotate', rotatedImage)
 
             key = cv2.waitKey(20)
             if key == 32: # 空格
-                rotate = self.rotate(rotate, oriention=1)
+                rotatedImage = self.rotate(rotatedImage, oriention=1)
                 count += 1
                 print count%4
                 continue
             elif key == 27: break
             else: pass
         cv2.destroyAllWindows()
-        return count%4
+        return scale, count%4,
 
     def _extract_frame_(self, factor=6):
         if os.path.exists(self.extractDoneLog):
-            print u'方向--%d, 抽取图片...' %0
-            return
+            rf = open(self.extractDoneLog)
+            line = [line for line in rf][0]
+            rf.close()
+            if int(line) == len(os.listdir(self.imgDir)):
+                print u'图片已经提取过啦^_^'
+                return
+            else:
+                print u'图片文件夹不完整，重新提取图片-_-'
 
         videoPath = os.path.join(self.inputDir, self.video)
         cap = cv2.VideoCapture(videoPath)
@@ -303,19 +353,22 @@ class VideoLabel(object):
         # idx, cnt, offset = 0, 0, random.randint(0, factor)
         idx, cnt, offset = 0, 0, 0
 
+        scale, oriention = 1.0, 0
         while (cap.isOpened()):
             ret, frame = cap.read()
             if ret == True:
                 if cnt == 0:
                     print u'按空格键调整方向，按ESC退出'
-                    oriention = self.reorient(frame)
-                    print u'方向--%d, 抽取图片...'%oriention
+                    scale, oriention = self.reorient(frame)
+                    # print u'尺度--%.2f, 方向--%d'%(scale, oriention)
 
                 if not (cnt + offset) % factor:
                     idx += 1
                     imgname = os.path.join(self.imgDir, self.video + '_' + str(idx) + '.png')
-                    frame = self.rotate(frame, oriention)
+                    _, frame = self.resize(frame, scale=scale)
+                    frame = self.rotate(frame, oriention=oriention)
                     cv2.imwrite(imgname, frame)
+                    print u'尺度--%.2f, 方向--%d, 图片--%s'%(scale, oriention, self.video + '_' + str(idx) + '.png')
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
                 cnt += 1
@@ -547,23 +600,24 @@ class VideoLabel(object):
         self.AC = 0  # A
         self.FC = 0  # F
         # self.HC = 0  # H
-        self.SC = 1  # [A|D|G|H|ESC]
-        self.MC = 1  # [G|H]
-        self.TC = 1  # [ESC]
+        self.SC = 0  # [A|D|G|H|ESC]
+        self.MC = 0  # [G|H]
+        self.TC = 0  # [ESC]
 
         sidx, eidx, cidx = -self.length, 0, 0
 
         self.update(0)
 
-        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
+        # cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 会造成OpenCV卡顿
+        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
             key = cv2.waitKey(20)
 
             self.SC = reduce(lambda x, y: x * y, [len(box.label) for box in self.boxes], 1)
-            # self.MC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects[sidx:eidx]])
-            # self.TC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects])
+            # self.MC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects[sidx:eidx]], 1)
+            # self.TC = reduce(lambda x, y: x * y, [wk.checked for wk in self.storerects], 1)
 
             if key == ord('x'): # delete bbox
                 if len(self.boxes) and self.chooseRect >= 0:
@@ -579,14 +633,14 @@ class VideoLabel(object):
                     self.update_frame()
 
             if key in map(ord, ['g', 'G', 'a', 'd'])+[27]:
-                if self.SC == 1:  #
+                if self.SC > 0:  #
                     self.storerects[cidx].name = self.name
                     self.storerects[cidx].checked = 1
                     self.storerects[cidx].boxes = copy.deepcopy(self.boxes)
                     self.draw_static(self.name, self.frame, self.shape, key, self.boxes)
 
             if key == ord('h'): # 回退30帧
-                if self.DC == 0 and self.SC == 1:
+                if self.DC == 0 and self.SC > 0:
                     if sidx > 0:
                         eidx = sidx
                         sidx = max(sidx - self.length, 0)
@@ -608,7 +662,7 @@ class VideoLabel(object):
                     self.DC = 1
 
             if key == ord('g'): # 前进30帧
-                if self.AC == 0 and self.SC == 1:
+                if self.AC == 0 and self.SC > 0:
                     if eidx < len(self.storerects):
                         sidx = eidx
                         eidx = min(eidx + self.length, len(self.storerects))
@@ -636,7 +690,7 @@ class VideoLabel(object):
                     self.FC = 1
 
             if key == ord('d'):
-                if self.FC == 1 and self.SC == 1:
+                if self.FC == 1 and self.SC > 0:
                     # # for symmetry
                     # if cidx+1 < eidx and self.storerects[cidx+1].checked == 0:
                     #     self.update_storerects(eidx, cidx, -1)
@@ -653,7 +707,7 @@ class VideoLabel(object):
                     self.DC = 0
 
             if key == ord('a'):
-                if self.FC == 1 and self.SC == 1:
+                if self.FC == 1 and self.SC > 0:
                     '''to update the previous frame'''
                     if cidx-1 > sidx and self.storerects[cidx-1].checked == 0:
                         self.update_storerects(sidx, cidx, 1)
@@ -694,7 +748,10 @@ if __name__ == '__main__':
         print videoPath
 
         vl = VideoLabel(video, inputDir, outputDir)
-        vl.length = 5
+
+        # vl.length = 5
+        # vl.linethick = 3
+        # vl.lineHighThick = 5
 
         if not len(vl.storerects):
             print u'视频标注完成^_^'

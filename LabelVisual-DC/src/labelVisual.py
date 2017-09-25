@@ -214,7 +214,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
-        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -311,11 +311,11 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\imgs' # 图片文件夹地址
-    xmldir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs\ld1.mp4\xmls' # xml文件夹地址
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\images\batch_3' # 图片文件夹地址
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelling\xmls_batch_3\batch_3' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
-    logname = 'visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
+    logname = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelling\xmls_batch_3\visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
     labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
 
 
