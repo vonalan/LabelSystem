@@ -311,11 +311,11 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\images\batch_3' # 图片文件夹地址
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelling\xmls_batch_3\batch_3' # xml文件夹地址
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\images' # 图片文件夹地址
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
-    logname = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\images_3hand_bk_20170818\unlabelled\labelling\xmls_batch_3\visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
+    logname = r'./visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
     labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
 
 
