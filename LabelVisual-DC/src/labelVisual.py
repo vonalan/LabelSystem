@@ -64,7 +64,11 @@ class labelVisual:
         self.shape = None
         self.boxes = None
         self.selected = -1
-        self.colors = self._get_colors_()
+
+        self.labels = []
+        self.colors = []
+        self._get_labels_and_colors_()
+
         self.xmlParser = xmlParser()
         ptem = open(prefix_template)
         self.ptemLine = ptem.read()
@@ -79,12 +83,23 @@ class labelVisual:
         self.scale = 1.0
         ''''''
 
-    def _get_colors_(self): 
-        colorList = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0),(255, 0, 0), (0, 0, 255), (255, 255, 66),
-                     (0, 122, 122), (122, 0, 122), (122, 122, 0)]
-        return colorList
+    def _get_labels_and_colors_(self):
+        numbers = [str(i) for i in range(1,10)] # [1-9]
+        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o'] # [10-18]
+
+        labels = numbers + letters
+        colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255),
+                  (255, 255, 66),(0, 122, 122), (122, 0, 122),
+                  (122, 122, 0),(255, 0, 0), (0, 0, 255),
+                  (255, 255, 66), (0, 122, 122), (122, 0, 122),
+                  (122, 122, 0),(255, 0, 0), (0, 0, 255),
+                  (255, 255, 66),(0, 122, 122), (122, 0, 122)]
+        assert len(labels) == len(colors)
+
+        # label = str(labels.index(key))
+        # color = colors[labels.index(key)]
+        self.labels = labels
+        self.colors = colors
 
     def updateFrame(self):
         if self.selected >=0:
@@ -150,50 +165,38 @@ class labelVisual:
         outfile.write('</annotation>')
         outfile.close()
 
-    def resizeFrame(self, frame):
-        # 显示器参数
-        # [高，宽]
-        height = 1080 * 4 // 5
-        width = 1920 * 4 // 5
-        screen = [height, width]
-        # screen = [270, 480]
 
-        # [高，宽]
-        scale = 1.0
-        sizes = [frame.shape[0], frame.shape[1]]
-        # dstsizes = sizes
+    def resize(self, frame=None, scale=None):
+        '''
+        to substitute
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
+        for user experience
+        '''
+        # (544,960) or
+        # (960,544)
 
-        r0 = (sizes[0] - screen[0])/float(screen[0])
-        r1 = (sizes[1] - screen[1])/float(screen[1])
+        orishape = (frame.shape[0], frame.shape[1])
+        objshape = (544, 960) if orishape[0] < orishape[1] else (960, 544)
 
-        if r0 > 0 and r1 > 0:
-            ratio = r1/r0
-            if ratio > 1:
-                scale *= (screen[1] / float(sizes[1]))
-                sizes[1] = screen[1]
-                sizes[0] = int(scale * sizes[0])
-            else:
-                scale *= (screen[0] / float(sizes[0]))
-                sizes[0] = screen[0]
-                sizes[1] = int(scale * sizes[1])
-        elif r0 > 0 and r1 <=0:
-            scale *= (screen[0] / float(sizes[0]))
-            sizes[0] = screen[0]
-            sizes[1] = int(scale * sizes[1])
-        elif r0 <= 0 and r1 > 0:
-            scale *= (screen[1] / float(sizes[1]))
-            sizes[1] = screen[1]
-            sizes[0] = int(scale * sizes[0])
-        else:
-            pass
+        ''''''
+        if scale is not None:
+            objshape = map(lambda x: int(x * scale), orishape)
+            resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+            return scale, resizeFrame
+        ''''''
 
-        # newsize
-        # [宽，高]
-        sizes = tuple(reversed(sizes))
-        frame = cv2.resize(frame, sizes, interpolation=cv2.INTER_CUBIC)
+        r0 = objshape[0] / float(orishape[0])
+        r1 = objshape[1] / float(orishape[1])
+        scale = max(r0, r1)
 
-        self.frame = frame
+        resizeFrame = frame
+        if scale < 1.0:
+            objshape = map(lambda x: int(x * scale), orishape)
+            resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+
+        # return scale, resizeFrame
         self.scale = scale
+        self.frame = resizeFrame
 
     def resizeBoxes(self, boxes):
         if self.buffboxes is None:
@@ -214,7 +217,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
-        # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -229,11 +232,11 @@ class labelVisual:
                 nameIdx = len(nameList)-1
             if nameIdx < 0:
                 nameIdx =0
+
             name = nameList[nameIdx] # load the picture and corresponding xml file
             imgname = os.path.join(imgDir, name)
             xmlname = os.path.join(xmlDir, name[:-4]+'.xml')
             print xmlname
-
 
             '''有些图片只能显示一部分，需要设置自适应窗口'''
             '''对于有多个目标的图片，Bounding Boxes可以顺序自动显示，而不需要鼠标激活'''
@@ -244,7 +247,7 @@ class labelVisual:
 
             frame = cv2.imread(imgname)
             self.frame = frame
-            self.resizeFrame(self.frame)
+            self.resize(self.frame)
             shape = self.frame.shape
             self.shape = shape
 #            print shape
@@ -254,7 +257,14 @@ class labelVisual:
 #            print self.boxImg.shape
             self.bufframe = copy.copy(self.frame) # deep copy
             if os.path.isfile(xmlname):
-                self.boxes = self.parseXml(xmlname)
+
+                try:
+                    self.boxes = self.parseXml(xmlname)
+                except:
+                    self.boxes = []
+                    print('No Label!!!')
+                else:pass
+
                 ''''''
                 self.buffboxes = copy.deepcopy(self.boxes)
                 self.resizeBoxes(self.buffboxes)
@@ -265,18 +275,7 @@ class labelVisual:
                 cv2.imshow("image", self.frame)
                 key = cv2.waitKey(20)
 
-                if self.selected >=0 and (key < 58 and key > 48 or key in list(map(ord, ['q','w','e','r','t','y','u','i','o','p']))): # {48:'0', ..., 57:'9', 58:':'}, change the label of gesture in the picture
-                    if key in list(map(ord, ['q','w','e','r','t','y','u','i','o','p'])):
-                        if key == ord('q'): key = 58
-                        if key == ord('w'): key = 59
-                        if key == ord('e'): key = 60
-                        if key == ord('r'): key = 61
-                        if key == ord('t'): key = 62
-                        if key == ord('y'): key = 63
-                        if key == ord('u'): key = 64
-                        if key == ord('i'): key = 65
-                        if key == ord('o'): key = 66
-                        if key == ord('p'): key = 67
+                if key in [ord(label) for label in self.labels]:
                     print str(key-48)
                     self.boxes[self.selected][0] = str(key-48) # 更改当前激活box的label
                     ''''''
@@ -285,6 +284,7 @@ class labelVisual:
                     self.updateFrame()
                     cv2.imshow("image", self.frame)
                     key = cv2.waitKey(20) # important
+
                 if key == 32 or key == 100: # {30:'space', 100:'d'}, skip to next picture
                     nameIdx += 1
                     if os.path.isfile(xmlname):
@@ -311,8 +311,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\images' # 图片文件夹地址
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\xmls' # xml文件夹地址
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\dbg\imgs' # 图片文件夹地址
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\dbg\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = r'./visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2

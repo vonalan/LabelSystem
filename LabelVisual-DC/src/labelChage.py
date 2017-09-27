@@ -201,31 +201,15 @@ class labelVisual:
                 break
         cv2.destroyAllWindows()
 
-
-class labelSelect(labelVisual):
+class changeLabel(labelVisual):
     def __init__(self, imgDir, xmlDir, prefix_template, object_template, logname):
         labelVisual.__init__(self, imgDir, xmlDir, prefix_template, object_template, logname)
-        # self.select()
 
-    def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
-        import shutil
-
+    def change(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
         nameList = os.listdir(srcimgdir)
-        # nameIdx = 0
-        # if os.path.isfile(logname):
-        #     logfile = open(logname)
-        #     nameIdx = int(logfile.read())
-        #     logfile.close()
 
-        # objectives = ['2', '5', '6']
         count = [0, len(objectives) * [0], 0] # {'nolabel', 'onelabel', 'mixedlabels'}
-
         for nameIdx, _ in enumerate(nameList):
-            # if nameIdx >= len(nameList):  # nameIdx >= 0  and nameIdx <= len(nameList)
-            #     nameIdx = len(nameList) - 1
-            # if nameIdx < 0:
-            #     nameIdx = 0
-
             name = nameList[nameIdx]  # load the picture and corresponding xml file
             imgname = os.path.join(srcimgdir, name)
             xmlname = os.path.join(srcxmldir, name[:-4] + '.xml')
@@ -237,19 +221,16 @@ class labelSelect(labelVisual):
             mixed labels 
             '''
             if flag:
-                xdstimgdir = ""
-                xdstxmldir = ""
+                self.frame = cv2.imread(imgname)
+                shape = self.frame.shape
+                self.shape = shape
+                self.boxes = self.parseXml(xmlname)
 
-                # try:
-                #     self.boxes = self.parseXml(xmlname)  # boxes is list of list
-                # except:
-                #     print xmlname
-                # else:
-                #     pass
+                xdstxmlname = ''
 
                 if len(self.boxes) == 0:    # 无标签
                     count[0] += 1
-                    # print count
+                    print count
                 else:                       # 有标签
                     label = self.boxes[0][0]
                     check = 1               # 检查标签是否一致
@@ -261,20 +242,19 @@ class labelSelect(labelVisual):
                         for i, obj in enumerate(objectives):
                             if label == obj:
                                 count[1][i] += 1
-                                # print count
-                                xdstimgdir = os.path.join(dstimgdir, obj)
-                                xdstxmldir = os.path.join(dstxmldir, obj)
+                                print count
+                        for i, obj in enumerate(self.boxes):
+                            self.boxes[i][0] = '1'
+                        xdstxmlname = os.path.join(dstxmldir, name[:-4] + '.xml')
                     else:
                         count[2] += 1       # 含有多个标签，且标签不一致
-                        # print count
+                        print count
 
-                if xdstimgdir and xdstxmldir:
+                if xdstxmlname:
                     # if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
-                    # if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
-                    # # shutil.copy(imgname, xdstimgdir)
-                    # # shutil.copy(xmlname, xdstxmldir)
-                    # shutil.move(imgname, xdstimgdir)
-                    # shutil.move(xmlname, xdstxmldir)
+                    if not os.path.exists(dstxmldir): os.makedirs(dstxmldir)
+                    print('saving...', xdstxmlname)
+                    self.saveXml(xdstxmlname)
                     pass
             else:
                 count[0] += 1
@@ -284,15 +264,15 @@ class labelSelect(labelVisual):
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\imgs'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\xmls'
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\images'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\test\xmls'
     dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\images'
     dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
-    objectives = [str(i+1) for i in range(20)]
+    objectives = ['3','4']
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
-    ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
-    ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)
+    ls = changeLabel(srcimgdir, srcxmldir, prefix_template, object_template, logname)
+    ls.change(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)

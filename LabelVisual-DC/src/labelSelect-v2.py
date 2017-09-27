@@ -210,63 +210,37 @@ class labelSelect(labelVisual):
     def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
         import shutil
 
-        nameList = os.listdir(srcimgdir)
-        # nameIdx = 0
-        # if os.path.isfile(logname):
-        #     logfile = open(logname)
-        #     nameIdx = int(logfile.read())
-        #     logfile.close()
+        count = [0, [0, len(objectives) * [0], 0]]  # {'noxml', 'nolabel', 'onelabel', 'mixedlabels'}
 
-        # objectives = ['2', '5', '6']
-        count = [0, len(objectives) * [0], 0] # {'nolabel', 'onelabel', 'mixedlabels'}
+        imgList = os.listdir(srcimgdir)
+        for idx, _ in enumerate(imgList):
+            name = imgList[idx]  # load the picture and corresponding xml file
+            imgpath = os.path.join(srcimgdir, name)
+            xmlpath = os.path.join(srcxmldir, name[:-4] + '.xml')
+            flag = os.path.exists(imgpath) and os.path.exists(xmlpath)
 
-        for nameIdx, _ in enumerate(nameList):
-            # if nameIdx >= len(nameList):  # nameIdx >= 0  and nameIdx <= len(nameList)
-            #     nameIdx = len(nameList) - 1
-            # if nameIdx < 0:
-            #     nameIdx = 0
-
-            name = nameList[nameIdx]  # load the picture and corresponding xml file
-            imgname = os.path.join(srcimgdir, name)
-            xmlname = os.path.join(srcxmldir, name[:-4] + '.xml')
-            flag = os.path.exists(imgname) and os.path.exists(xmlname)
-
-            '''
-            no label 
-            one label 
-            mixed labels 
-            '''
             if flag:
                 xdstimgdir = ""
                 xdstxmldir = ""
 
-                # try:
-                #     self.boxes = self.parseXml(xmlname)  # boxes is list of list
-                # except:
-                #     print xmlname
-                # else:
-                #     pass
+                try: # 有标签
+                    self.boxes = self.parseXml(xmlpath)  # boxes is list of list
 
-                if len(self.boxes) == 0:    # 无标签
-                    count[0] += 1
-                    # print count
-                else:                       # 有标签
-                    label = self.boxes[0][0]
-                    check = 1               # 检查标签是否一致
                     for box in self.boxes:
-                        if box[0] != label:
-                            check = 0
-                            break
-                    if check == 1:          # 只含有一个标签，或者含有多个标签且标签一致
+                        label = box[0]
+
                         for i, obj in enumerate(objectives):
                             if label == obj:
                                 count[1][i] += 1
                                 # print count
                                 xdstimgdir = os.path.join(dstimgdir, obj)
                                 xdstxmldir = os.path.join(dstxmldir, obj)
-                    else:
-                        count[2] += 1       # 含有多个标签，且标签不一致
-                        # print count
+                except: # 无标签
+                    print xmlpath
+                    count[0] += 1
+                else:
+                    pass
+
 
                 if xdstimgdir and xdstxmldir:
                     # if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)

@@ -739,8 +739,8 @@ class VideoLabel(object):
         time.sleep(1)
 
 if __name__ == '__main__':
-    inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'  # 视频文件夹地址
-    outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'  # images和xmls输出地址
+    inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'       # 视频文件夹地址
+    outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'     # images和xmls输出地址
 
     videoList = os.listdir(inputDir)
     for video in videoList:
@@ -749,9 +749,9 @@ if __name__ == '__main__':
 
         vl = VideoLabel(video, inputDir, outputDir)
 
-        # vl.length = 5
-        # vl.linethick = 3
-        # vl.lineHighThick = 5
+        # vl.length = 10          # [g|h]键跳转的帧数
+        # vl.linethick = 1        # 边框粗细
+        # vl.lineHighThick = 3    # 选中时边框粗细
 
         if not len(vl.storerects):
             print u'视频标注完成^_^'
