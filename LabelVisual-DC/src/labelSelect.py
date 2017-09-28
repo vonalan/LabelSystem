@@ -284,8 +284,8 @@ class labelSelect(labelVisual):
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\imgs'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\xmls'
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\jiandao_shitou_bu\train\images'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\jiandao_shitou_bu\train\xmls'
     dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\images'
     dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\xmls'
     prefix_template = 'template_prefix.xml'

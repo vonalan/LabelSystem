@@ -217,7 +217,7 @@ class labelVisual:
         cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
-        nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
         nameIdx = 0
 
         '''log文件可以保存更多的信息'''
@@ -276,10 +276,10 @@ class labelVisual:
                 key = cv2.waitKey(20)
 
                 if key in [ord(label) for label in self.labels]:
-                    print str(key-48)
-                    self.boxes[self.selected][0] = str(key-48) # 更改当前激活box的label
+                    # print str(self.labels.index(chr(key)) + 1)
+                    self.boxes[self.selected][0] = str(self.labels.index(chr(key)) + 1) # 更改当前激活box的label
                     ''''''
-                    self.buffboxes[self.selected][0] = str(key-48) # 更改当前激活box的label
+                    self.buffboxes[self.selected][0] = str(self.labels.index(chr(key)) + 1) # 更改当前激活box的label
                     ''''''
                     self.updateFrame()
                     cv2.imshow("image", self.frame)
@@ -311,8 +311,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\dbg\imgs' # 图片文件夹地址
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\dbg\xmls' # xml文件夹地址
+    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\imgs' # 图片文件夹地址
+    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = r'./visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2

@@ -201,82 +201,88 @@ class labelVisual:
                 break
         cv2.destroyAllWindows()
 
-class changeLabel(labelVisual):
+
+class labelSelect(labelVisual):
     def __init__(self, imgDir, xmlDir, prefix_template, object_template, logname):
         labelVisual.__init__(self, imgDir, xmlDir, prefix_template, object_template, logname)
+        # self.select()
 
-    def change(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
-        nameList = os.listdir(srcimgdir)
+    def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
+        import shutil
 
-        count = [0, len(objectives) * [0], 0] # {'nolabel', 'onelabel', 'mixedlabels'}
-        for nameIdx, _ in enumerate(nameList):
-            name = nameList[nameIdx]  # load the picture and corresponding xml file
-            imgname = os.path.join(srcimgdir, name)
-            xmlname = os.path.join(srcxmldir, name[:-4] + '.xml')
-            flag = os.path.exists(imgname) and os.path.exists(xmlname)
+        # imgCount = [0, 0, 0, [0,0]] # {'noxml', 'nolabel', 'onelabel', {'purelabel', 'mixlabel'}}
+        # lblCount = len(objectives) * [0] # ['1', '2', '3', '4']
 
-            '''
-            no label 
-            one label 
-            mixed labels 
-            '''
+        imgList = os.listdir(srcimgdir)
+        for idx, _ in enumerate(imgList):
+            name = imgList[idx]  # load the picture and corresponding xml file
+
+            # imgpath = os.path.join(srcimgdir, name)
+            # xmlpath = os.path.join(srcxmldir, name[:-4] + '.xml')
+
+            imgpath = os.path.join(srcimgdir, name)
+            xmlpath = os.path.join(dstxmldir, name[:-4] + '.xml')
+
+            flag = os.path.exists(imgpath) and os.path.exists(xmlpath)
+
             if flag:
-                self.frame = cv2.imread(imgname)
+                self.frame = cv2.imread(imgpath)
                 shape = self.frame.shape
                 self.shape = shape
 
-                try:
-                    self.boxes = self.parseXml(xmlname)
-                except:
+                xdstxmldir = ''
+                xdstxmlpath = ''
+                change = 0
+
+                try: # 有标签
+                    self.boxes = self.parseXml(xmlpath)  # boxes is list of list
+                    for idx, box in enumerate(self.boxes):
+                        label = box[0]
+                        if label == '5':
+                            self.boxes[idx][0] = '3'
+                            change = 1
+                        if label == '6':
+                            self.boxes[idx][0] = '4'
+                            change = 1
+                except: # 无标签
                     self.boxes = []
+                else: pass
 
-                xdstxmlname = ''
+                if change == 1:
+                    xdstxmldir = dstxmldir
+                    xdstxmlpath = os.path.join(xdstxmldir, name[:-4] + '.xml')
 
-                if len(self.boxes) == 0:    # 无标签
-                    count[0] += 1
-                    print count
-                else:                       # 有标签
-                    label = self.boxes[0][0]
-                    check = 1               # 检查标签是否一致
-                    for box in self.boxes:
-                        if box[0] != label:
-                            check = 0
-                            break
-                    if check == 1:          # 只含有一个标签，或者含有多个标签且标签一致
-                        for i, obj in enumerate(objectives):
-                            if label == obj:
-                                count[1][i] += 1
-                                print count
-                        for i, obj in enumerate(self.boxes):
-                            self.boxes[i][0] = '1'
-                        xdstxmlname = os.path.join(dstxmldir, name[:-4] + '.xml')
-                    else:
-                        count[2] += 1       # 含有多个标签，且标签不一致
-                        print count
+                if xdstxmldir:
+                    if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
+                    # print('saving... '+ xdstxmlpath)
+                    # print(self.boxes)
+                    self.saveXml(xdstxmlpath)
 
-                if xdstxmlname:
-                    # if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
-                    if not os.path.exists(dstxmldir): os.makedirs(dstxmldir)
-                    print('saving...', xdstxmlname)
-                    # self.saveXml(xdstxmlname)
-                    pass
+                    # try:
+                    #     self.saveXml(xdstxmlpath)
+                    # except:
+                    #     print('Error! ')
+                    # else:
+                    #     pass
+
             else:
-                count[0] += 1
+                pass
+                # imgCount[0] += 1
                 # print "Invalid xmlname: %s"%xmlname
                 # raise Exception("Error")
-        print count
 
 
 if __name__ == '__main__':
     srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\imgs'
     srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\xmls'
-    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\images'
-    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\xmls'
+    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\dbgs\imgs'
+    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\dbgs\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
-    objectives = ['3','4']
+    objectives = []
+    # objectives = ['1','2','3','4']
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
-    ls = changeLabel(srcimgdir, srcxmldir, prefix_template, object_template, logname)
-    ls.change(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)
+    ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
+    ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)

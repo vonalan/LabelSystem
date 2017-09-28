@@ -210,7 +210,8 @@ class labelSelect(labelVisual):
     def select(self, srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives=[]):
         import shutil
 
-        count = [0, [0, len(objectives) * [0], 0]]  # {'noxml', 'nolabel', 'onelabel', 'mixedlabels'}
+        imgCount = [0, 0, 0, [0,0]] # {'noxml', 'nolabel', 'onelabel', {'purelabel', 'mixlabel'}}
+        lblCount = len(objectives) * [0] # ['1', '2', '3', '4']
 
         imgList = os.listdir(srcimgdir)
         for idx, _ in enumerate(imgList):
@@ -226,47 +227,65 @@ class labelSelect(labelVisual):
                 try: # 有标签
                     self.boxes = self.parseXml(xmlpath)  # boxes is list of list
 
+                    label = self.boxes[0][0]
+                    check = 1  # 检查标签是否一致
+                    for box in self.boxes:
+                        if box[0] != label:
+                            check = 0
+                            break
+
+                    if check == 1: # one or two
+                        if len(self.boxes) == 1:
+                            imgCount[2] += 1
+                        else:
+                            imgCount[3][0] += 1
+                    else: # two
+                        imgCount[3][1] += 1
+
                     for box in self.boxes:
                         label = box[0]
 
+                        if label not in objectives:
+                            print label, xmlpath
+                            xdstimgdir = dstimgdir
+                            xdstxmldir = dstxmldir
+
                         for i, obj in enumerate(objectives):
                             if label == obj:
-                                count[1][i] += 1
-                                # print count
-                                xdstimgdir = os.path.join(dstimgdir, obj)
-                                xdstxmldir = os.path.join(dstxmldir, obj)
+                                lblCount[i] += 1
+
                 except: # 无标签
-                    print xmlpath
-                    count[0] += 1
+                    imgCount[1] += 1
+                    # print xmlpath
                 else:
                     pass
-
-
                 if xdstimgdir and xdstxmldir:
                     # if not os.path.exists(xdstimgdir): os.makedirs(xdstimgdir)
                     # if not os.path.exists(xdstxmldir): os.makedirs(xdstxmldir)
-                    # # shutil.copy(imgname, xdstimgdir)
-                    # # shutil.copy(xmlname, xdstxmldir)
+                    # shutil.copy(imgpath, xdstimgdir)
+                    # shutil.copy(xmlpath, xdstxmldir)
                     # shutil.move(imgname, xdstimgdir)
                     # shutil.move(xmlname, xdstxmldir)
                     pass
             else:
-                count[0] += 1
+                imgCount[0] += 1
                 # print "Invalid xmlname: %s"%xmlname
                 # raise Exception("Error")
-        print count
+        print imgCount
+        print lblCount
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\imgs'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\xmls'
-    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\images'
-    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818_labelled\jiandao_shitou_bu\dbg\xmls'
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\jiandaoshitoubu\valid\imgs'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\jiandaoshitoubu\valid\xmls'
+    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\dbg\imgs'
+    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\dbg\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
 
     objectives = [str(i+1) for i in range(20)]
+    # objectives = ['1','2','3','4']
     # labelVisual(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls = labelSelect(srcimgdir, srcxmldir, prefix_template, object_template, logname)
     ls.select(srcimgdir, srcxmldir, logname, dstimgdir, dstxmldir, objectives)
