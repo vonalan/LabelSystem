@@ -154,7 +154,20 @@ class VideoLabel(object):
         # self.labelDoneLog = os.path.join(self.outputDir, video, 'labellingDone.log')
 
     # 输出xml方法，
-    def writeXML(self, imgsize, names, boxes, outname):
+    def writeXML(self, shape, names, boxes, outname):
+        '''
+
+        :param shape:
+        :param names:
+        :param boxes:
+        :param outname:
+        :return:
+        '''
+
+        ''''''
+        imgsize = [shape[1], shape[0]]
+        ''''''
+
         ptem = open(self.prefix_template)
         ptemline = ptem.read()
         ptem.close()
@@ -739,8 +752,8 @@ class VideoLabel(object):
         time.sleep(1)
 
 if __name__ == '__main__':
-    inputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\videos'       # 视频文件夹地址
-    outputDir = r'F:\Users\kingdom\Documents\GIT\LabelSystem\VideoLabel-DF\outputs'     # images和xmls输出地址
+    inputDir = r'../videos'       # 视频文件夹地址
+    outputDir = r'../outputs'     # images和xmls输出地址
 
     videoList = os.listdir(inputDir)
     for video in videoList:

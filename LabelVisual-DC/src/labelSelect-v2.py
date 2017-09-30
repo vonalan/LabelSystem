@@ -239,16 +239,20 @@ class labelSelect(labelVisual):
                             imgCount[2] += 1
                         else:
                             imgCount[3][0] += 1
+                            xdstimgdir = dstimgdir
+                            xdstxmldir = dstxmldir
                     else: # two
                         imgCount[3][1] += 1
+                        xdstimgdir = dstimgdir
+                        xdstxmldir = dstxmldir
 
                     for box in self.boxes:
                         label = box[0]
 
                         if label not in objectives:
                             print label, xmlpath
-                            xdstimgdir = dstimgdir
-                            xdstxmldir = dstxmldir
+                            # xdstimgdir = dstimgdir
+                            # xdstxmldir = dstxmldir
 
                         for i, obj in enumerate(objectives):
                             if label == obj:
