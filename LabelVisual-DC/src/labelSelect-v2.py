@@ -280,10 +280,10 @@ class labelSelect(labelVisual):
 
 
 if __name__ == '__main__':
-    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\jiandaoshitoubu\valid\imgs'
-    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\jiandaoshitoubu\valid\xmls'
-    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\dbg\imgs'
-    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\shitoujiandaobu_pure\dbg\xmls'
+    srcimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\jiandaoshitoubu\valid\imgs'
+    srcxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\jiandaoshitoubu\valid\xmls'
+    dstimgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\dbgs\imgs'
+    dstxmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\dbgs\xmls'
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = 'visual.log'
