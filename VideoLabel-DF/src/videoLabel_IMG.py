@@ -309,7 +309,7 @@ class VideoLabel(object):
 
         r0 = objshape[0] / float(orishape[0])
         r1 = objshape[1] / float(orishape[1])
-        scale = max(r0, r1)
+        scale = min(r0, r1)  # 无论放大还是缩小，都应该使用min()?!!!
 
         resizeFrame = frame
         if scale < 1.0:

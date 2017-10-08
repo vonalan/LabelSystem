@@ -56,6 +56,15 @@ class xmlParser:
             rets = [[0,0,0,0,0]]
         return rets
 
+    def parsing_sizes_dev(self, filename):
+        tree = et.parse(filename)
+        root = tree.getroot()
+        sizes = root.find('size')
+        width = int(sizes.find('width').text)
+        height = int(sizes.find('height').text)
+
+        return [width, height]
+
 class labelVisual:
     def __init__(self, imgDir, xmlDir, prefix_template, object_template, logname):
         self.boxImg = None
@@ -103,14 +112,22 @@ class labelVisual:
 
     def updateFrame(self):
         if self.selected >=0:
-            box = self.buffboxes[self.selected]
+            box = self.boxes[self.selected]
             cv2.rectangle(self.frame, tuple(box[1:3]), tuple(box[3:]), (255,255,255), thickness = 7)
-        self.drawBoxes(self.buffboxes)
+        self.drawBoxes(self.boxes)
 
     def freeMove(self, x, y):
-        if self.buffboxes is None:
+        if self.boxes is None:
             return
-        self.frame = copy.copy(self.bufframe)
+        self.frame = copy.deepcopy(self.bufframe)
+
+        ''''''
+        self.resize(self.frame) # self.scale && self.frame
+        shape = self.frame.shape
+        self.shape = shape
+        self.boxImg = np.zeros((shape[0], shape[1]))-1
+        ''''''
+
         idx = int(self.boxImg[y, x])
         if idx >= 0:
 #            print idx
@@ -145,8 +162,9 @@ class labelVisual:
 #            print box[2],box[4],  box[1], box[3]
             self.boxImg[box[2]:box[4], box[1]:box[3]] = b
 
+    '''最为核心的部分'''
     def saveXml(self, xmlname):
-        imgsize = [self.frame.shape[1], self.frame.shape[0]]
+        imgsize = [self.bufframe.shape[1], self.bufframe.shape[0]]
         org_object = copy.copy(self.otemLine)
         ptemLine = copy.copy(self.ptemLine)
         ptemLine = ptemLine.replace('$width$', str(imgsize[0]))
@@ -154,7 +172,7 @@ class labelVisual:
 
         outfile = open(xmlname, 'w')
         outfile.write(ptemLine)
-        for i, box in enumerate(self.boxes):
+        for i, box in enumerate(self.buffboxes):
             otemLine = copy.copy(org_object)
             otemLine = otemLine.replace("$name$", box[0])
             otemLine = otemLine.replace('$xmin$', str(box[1]))
@@ -165,9 +183,49 @@ class labelVisual:
         outfile.write('</annotation>')
         outfile.close()
 
+    # def resize_v1(self, frame=None, scale=None):
+    #     '''
+    #     resize v1
+    #
+    #     :param frame:
+    #     :param scale:
+    #     :return:
+    #     '''
+    #     # (1080, 1920) * 0.8 or
+    #     # (1920, 1080) * 0.8
+    #
+    #     tmpshape = [1080, 1920]
+    #     tmpshape1 = [int(i * 0.8) for i in tmpshape]
+    #     tmpshape2 = [int(i * (1080/float(1920))) for i in reversed(tmpshape1)]
+    #
+    #     orishape = (frame.shape[0], frame.shape[1])
+    #     objshape = (tuple(tmpshape1)) if orishape[0] < orishape[1] else (tuple(tmpshape2))
+    #
+    #     ''''''
+    #     if scale is not None:
+    #         objshape = map(lambda x: int(x * scale), orishape)
+    #         resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+    #         return scale, resizeFrame
+    #     ''''''
+    #
+    #     r0 = objshape[0] / float(orishape[0])
+    #     r1 = objshape[1] / float(orishape[1])
+    #     scale = min(r0, r1) # !!!
+    #
+    #     resizeFrame = frame
+    #     if scale < 1.0:
+    #         objshape = map(lambda x: int(x * scale), orishape)
+    #         resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
+    #
+    #     # return scale, resizeFrame
+    #     self.scale = scale
+    #     self.frame = resizeFrame
 
+    '''只用来显示图片，而不能用于xmls写入'''
     def resize(self, frame=None, scale=None):
         '''
+        resize v2
+
         to substitute
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         for user experience
@@ -187,7 +245,7 @@ class labelVisual:
 
         r0 = objshape[0] / float(orishape[0])
         r1 = objshape[1] / float(orishape[1])
-        scale = max(r0, r1)
+        scale = min(r0, r1) # 无论放大还是缩小，都应该使用min()?!!!
 
         resizeFrame = frame
         if scale < 1.0:
@@ -198,18 +256,22 @@ class labelVisual:
         self.scale = scale
         self.frame = resizeFrame
 
+    '''只用来显示图片，而不能用于xmls写入'''
     def resizeBoxes(self, boxes):
-        if self.buffboxes is None:
+        # self.boxes == self.bufferboxes
+
+        if self.boxes is None:
             return
 
         scale = self.scale
         for _, box in enumerate(boxes):  # box = [label, xmin, ymin, xmax, ymax]
-            box[1] = int(box[1] * scale)
+            box[1] = int(box[1] * scale) # floor
             box[2] = int(box[2] * scale)
             box[3] = int(box[3] * scale)
             box[4] = int(box[4] * scale)
 
-        self.buffboxes = boxes
+        '''谢天谢地啊，写入xmls的是self.bufferdboxes'''
+        self.boxes = boxes
 
     def visual(self, imgDir, xmlDir, logname):
         '''有些图片只能显示一部分，需要设置自适应窗口'''
@@ -245,17 +307,16 @@ class labelVisual:
             # frame, scale = ImageAdaption(frame)
             # self.scale = scale
 
+
             frame = cv2.imread(imgname)
-            self.frame = frame
-            self.resize(self.frame)
+            self.frame = frame # self.frame用于画画
+            self.bufframe = copy.deepcopy(self.frame)  # self.bufframe用于备份以及xml文件写入
+
+            self.resize(self.frame) # self.scale && self.frame
             shape = self.frame.shape
             self.shape = shape
-#            print shape
-            ###
-
             self.boxImg = np.zeros((shape[0], shape[1]))-1
-#            print self.boxImg.shape
-            self.bufframe = copy.copy(self.frame) # deep copy
+
             if os.path.isfile(xmlname):
 
                 try:
@@ -266,9 +327,11 @@ class labelVisual:
                 else:pass
 
                 ''''''
-                self.buffboxes = copy.deepcopy(self.boxes)
-                self.resizeBoxes(self.buffboxes)
-                self.drawBoxes(self.buffboxes)
+                # self.boxes 用于画画
+                self.buffboxes = copy.deepcopy(self.boxes) # self.buffboxes用于备份以及xmls写入
+                self.resizeBoxes(self.boxes)
+                self.drawBoxes(self.boxes)
+
                 ''''''
 
             while True:
@@ -311,8 +374,8 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\imgs' # 图片文件夹地址
-    xmldir = r'D:\Users\Administrator\Desktop\HGR\hand_dataset\3hand_bk_20170818\3hand_bk_20170818_labelled\pure\xmls' # xml文件夹地址
+    imgdir = r'F:\Users\Kingdom\Desktop\VideoLabel-DF\outputs\imgs' # 图片文件夹地址
+    xmldir = r'F:\Users\Kingdom\Desktop\VideoLabel-DF\outputs\xmls' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = r'./visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
