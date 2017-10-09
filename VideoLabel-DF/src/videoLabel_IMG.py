@@ -24,7 +24,7 @@ class BBox(object):
         self.rect[0][1] += deltaY
         self.rect[1][0] += deltaX
         self.rect[1][1] += deltaY
-
+        
     def check(self, minBox, shape):
         '''
         rect[0][0] >= 0 && rect[0][0] <= rect[1][0]
