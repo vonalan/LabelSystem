@@ -59,7 +59,7 @@ class VideoLabel(object):
         self.object_template = r'./template_object.xml'
 
         self.minBox = 10
-        self.thick = 5
+        self.thick = 10
         self.linethick = 1
         self.lineHighThick = 3
         self.font = cv2.FONT_HERSHEY_SIMPLEX
@@ -113,7 +113,7 @@ class VideoLabel(object):
         letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o'] # [10-18]
 
         labels = numbers + letters
-        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255),
+        colors = [(0, 255, 0), (255, 0, 0), (0, 0, 255),
                   (255, 255, 66),(0, 122, 122), (122, 0, 122),
                   (122, 122, 0),(255, 0, 0), (0, 0, 255),
                   (255, 255, 66), (0, 122, 122), (122, 0, 122),
@@ -217,12 +217,8 @@ class VideoLabel(object):
             if box.label:
                 label = box.label
                 rect = box.rect
-                ''''''
-                tmpsize = cv2.getTextSize(label, self.font, self.fontsize * (self.thick/10.0), 2) # ((w,h), b)
-                coord = (int((rect[0][0] + rect[1][0])/2 - tmpsize[0][0]/2), rect[1][1])
-                # 以 544 * 960 为基准，提供缩放功能，此时self.thick = 10
-                ''''''
-                cv2.putText(self.frame, label, coord, self.font, self.fontsize * (self.thick/10.0), self.colors[int(label)-1], 2,
+                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
                             cv2.LINE_AA)
         cv2.imwrite(self.dbgDir + name, frame)
 
@@ -469,12 +465,8 @@ class VideoLabel(object):
             if box.label:
                 label = box.label
                 rect = box.rect
-                ''''''
-                tmpsize = cv2.getTextSize(label, self.font, self.fontsize * (self.thick/10.0), 2) # ((w,h), b)
-                coord = (int((rect[0][0] + rect[1][0])/2 - tmpsize[0][0]/2), rect[1][1])
-                # 以 544 * 960 为基准，提供缩放功能，此时self.thick = 10
-                ''''''
-                cv2.putText(self.frame, label, coord, self.font, self.fontsize * (self.thick/10.0), self.colors[int(label)-1], 2,
+                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
                             cv2.LINE_AA)
 
     def rect_done(self, x, y):
@@ -629,8 +621,8 @@ class VideoLabel(object):
 
         self.update(0)
 
-        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
-        # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
+        # cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
+        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
@@ -773,7 +765,6 @@ if __name__ == '__main__':
         # vl.length = 10          # [g|h]键跳转的帧数
         # vl.linethick = 1        # 边框粗细
         # vl.lineHighThick = 3    # 选中时边框粗细
-        # vl.thick = 5              # 边框四个角的大小
 
         if not len(vl.storerects):
             print u'视频标注完成^_^'
@@ -799,5 +790,4 @@ ctrl+c ---- 强制退出。（命令行窗口才有效。）
     11. 重写数据结构
     12. 与标签检查工具合并
     13. 重新设计box数目不一致时的插值方法
-    14. 以544*960为基准，提供缩放功能，此时self.thick=10; 
     '''
