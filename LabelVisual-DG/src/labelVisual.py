@@ -123,6 +123,7 @@ class LabelVisual(object):
 
         self.minBox = 10
         self.thick = 10
+        self.baseThick = 5.0
         self.linethick = 1
         self.lineHighThick = 3
         self.font = cv2.FONT_HERSHEY_SIMPLEX
@@ -196,7 +197,8 @@ class LabelVisual(object):
         left = [img for img in total if img not in exist]
         # for
         # self.nameList = sorted(left, key=lambda x: int((x.split('.')[1]).split('_')[1]))
-        self.nameList = sorted(left, key=lambda x: int((x.split('_')[-1]).split('.')[0]))
+        # self.nameList = sorted(left, key=lambda x: int((x.split('_')[-1]).split('.')[0]))
+        self.nameList = sorted(left)
         # self.storerects = [FrameInfo(name) for name in self.nameList]
         # self.length = min(self.length, len(self.nameList))
 
@@ -299,8 +301,12 @@ class LabelVisual(object):
             if box.label:
                 label = box.label
                 rect = box.rect
-                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
-                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
+                ''''''
+                tmpsize = cv2.getTextSize(label, self.font, self.fontsize * (self.thick/self.baseThick), 2) # ((w,h), b)
+                coord = (int((rect[0][0] + rect[1][0])/2 - tmpsize[0][0]/2), rect[1][1])
+                # 以 544 * 960 为基准，提供缩放功能，此时self.thick = 10
+                ''''''
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize * (self.thick/self.baseThick), self.colors[int(label)-1], 2,
                             cv2.LINE_AA)
         cv2.imwrite(self.dbgImgDir + name, frame)
 
@@ -309,8 +315,13 @@ class LabelVisual(object):
         # rects = [[box.rect[0][0], box.rect[0][1], box.rect[1][0], box.rect[1][1]] for box in boxes]
         rects = [box.rect[0] + box.rect[1] for box in boxes]
         try:
+            # step 01 -- back up xmls
+            srcxmlname = os.path.join(self.xmlDir, self.name[:-4] + '.xml')
+            dstxmlname = os.path.join(self.bakXmlDir, self.name[:-4] + '.xml')
+            if( not os.path.exists(dstxmlname)):
+                shutil.copy(srcxmlname, dstxmlname)
             # step 03 -- write back xmls
-            self.writeXML(shape, labels, rects, self.xmlDir + name[:-4] + '.xml')
+            self.writeXML(shape, labels, rects, srcxmlname)
             # self.writeXML(shape, labels, rects, self.dbgXmlDir + name[:-4] + '.xml')
         except IndexError:
             print('You forget label the category!')
@@ -332,10 +343,10 @@ class LabelVisual(object):
 
         ''''''
         # step 01 -- back up xmls
-        srcxmlname = xmlname
-        dstxmlname = os.path.join(self.bakXmlDir, self.name[:-4] + '.xml')
-        if( not os.path.exists(dstxmlname)):
-            shutil.copy(srcxmlname, dstxmlname)
+        # srcxmlname = xmlname
+        # dstxmlname = os.path.join(self.bakXmlDir, self.name[:-4] + '.xml')
+        # if( not os.path.exists(dstxmlname)):
+        #     shutil.copy(srcxmlname, dstxmlname)
 
         # srcimgname = imgname
         # dstimgname = os.path.join(self.bakImgDir, self.name)
@@ -487,8 +498,12 @@ class LabelVisual(object):
             if box.label:
                 label = box.label
                 rect = box.rect
-                coord = (int((rect[0][0] + rect[1][0]) / 2), rect[1][1])
-                cv2.putText(self.frame, label, coord, self.font, self.fontsize, self.colors[int(label)-1], 2,
+                ''''''
+                tmpsize = cv2.getTextSize(label, self.font, self.fontsize * (self.thick/self.baseThick), 2) # ((w,h), b)
+                coord = (int((rect[0][0] + rect[1][0])/2 - tmpsize[0][0]/2), rect[1][1])
+                # 以 544 * 960 为基准，提供缩放功能，此时self.thick = 10
+                ''''''
+                cv2.putText(self.frame, label, coord, self.font, self.fontsize * (self.thick/self.baseThick), self.colors[int(label)-1], 2,
                             cv2.LINE_AA)
 
     def rect_done(self, x, y):
@@ -636,8 +651,8 @@ class LabelVisual(object):
         self.update_boxImg()
         self.update_frame()
 
-        # cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
-        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
+        # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
         cv2.setMouseCallback("image", self.draw_rect)
         while True:
             cv2.imshow("image", self.frame)
@@ -692,10 +707,10 @@ if __name__ == '__main__':
     指定相应的地址。
     标注完后只需要xmlDir里面的文件。
     '''
-    imgDir = r'../imgs/'    # images地址
-    xmlDir = r'../xmls/'    # xmls地址
-    dbgDir = r'../dbgs/'    # 修改xml之后图片的效果（用来快速检查错误）
-    bakDir = r'../baks'     # xmls备份地址（出现错误后恢复）
+    imgDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\wrong_image_ori'    # images地址
+    xmlDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\wrong_xml'    # xmls地址
+    dbgDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\dbgs'    # 修改xml之后图片的效果（用来快速检查错误）
+    bakDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\baks'     # xmls备份地址（出现错误后恢复）
 
     lv = LabelVisual(imgDir, xmlDir, dbgDir, bakDir)
 
