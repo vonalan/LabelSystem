@@ -130,7 +130,8 @@ class VideoLabel(object):
         total = os.listdir(self.imgDir)
         exist = [xml[:-4] + '.png' for xml in os.listdir(self.xmlDir)]
         left = [img for img in total if img not in exist]
-        self.nameList = sorted(left, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        # self.nameList = sorted(left, key=lambda x: int((x.split('.')[1]).split('_')[1]))
+        self.nameList = sorted(left, key=lambda x: int((x.split('_')[-1]).split('.')[0]))
         self.storerects = [FrameInfo(name) for name in self.nameList]
         self.length = min(self.length, len(self.nameList))
 
