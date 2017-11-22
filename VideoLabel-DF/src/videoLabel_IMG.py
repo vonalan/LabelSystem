@@ -244,7 +244,9 @@ class VideoLabel(object):
     def update(self, idx):
         self.name = self.storerects[idx].name
         # self.checked = self.storerects[idx].checked
+        # print([box.label for box in self.boxes])
         self.boxes = self.storerects[idx].boxes
+        # print([box.label for box in self.boxes])
 
         imgname = os.path.join(self.imgDir, self.name)
         self.frame = cv2.imread(imgname)
@@ -282,6 +284,7 @@ class VideoLabel(object):
         cArray = cArray.tolist()
         for i, clist in enumerate(cArray):
             self.storerects[eidx-1].boxes[i].rect = clist
+            self.storerects[eidx-1].boxes[i].label = eboxes[i].label
 
     # class imageExtractor(video=None):
     #     def __init__(self):
@@ -660,6 +663,7 @@ class VideoLabel(object):
                     self.storerects[cidx].checked = 1
                     self.storerects[cidx].boxes = copy.deepcopy(self.boxes)
                     self.draw_static(self.name, self.frame, self.shape, key, self.boxes)
+                    # print([box.label for box in self.boxes])
 
             if key == ord('h'): # 回退30帧
                 if self.DC == 0 and self.SC > 0:
