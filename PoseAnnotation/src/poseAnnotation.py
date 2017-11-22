@@ -34,12 +34,39 @@ class PoseAnnotation(object):
         self.bufferFrame = None
         self.joints = []
         self.bufferJoints = []
-    def call_back_func(self):
+
+        self.imageDir = imageDir
+        self.outputDir = outputDir
+
+        self.imageList = []
+    def update(self, index):
+        imagePath = os.path.join(self.imageDir, self.imageList[index])
+        self.frame = cv2.imread(imagePath)
+        self.bufferFrame = copy.copy(self.frame)
+        self.joints = []
+        self.bufferJoints = []
+    def update_frame(self):
+        pass
+    def call_back_func(self, event, x, y, flags, param):
         pass
     def annotation(self):
-        imageList = os.listdir(imageDir)
+        self.imageList = os.listdir(imageDir)
+        cidx = 0
+        self.update(cidx)
+
+        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
+        cv2.setMouseCallback('image', self.call_back_func)
+        while True:
+            cv2.imshow('image', self.frame)
+            key = cv2.waitKey(20)
+
+            if key == 27:
+                break
+
+
 
 if __name__ == '__main__':
-    imageDir = './images/'
-    outputDir = './outputs'
+    imageDir = '../images/'
+    outputDir = '../outputs'
     pa = PoseAnnotation(imageDir, outputDir)
+    pa.annotation()
