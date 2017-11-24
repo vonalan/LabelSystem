@@ -122,7 +122,7 @@ class LabelVisual(object):
         self.xmlParser = xmlParser()
 
         self.minBox = 10
-        self.thick = 10
+        self.thick = 5
         self.baseThick = 5.0
         self.linethick = 1
         self.lineHighThick = 3
@@ -707,10 +707,10 @@ if __name__ == '__main__':
     指定相应的地址。
     标注完后只需要xmlDir里面的文件。
     '''
-    imgDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\wrong_image_ori'    # images地址
-    xmlDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\wrong_xml'    # xmls地址
-    dbgDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\dbgs'    # 修改xml之后图片的效果（用来快速检查错误）
-    bakDir = r'D:\Users\Administrator\Desktop\hhhxxxhhhxxxhhh\baks'     # xmls备份地址（出现错误后恢复）
+    imgDir = r'../imgs/'    # images地址
+    xmlDir = r'../xmls/'    # xmls地址
+    dbgDir = r'../dbgs/'    # 修改xml之后图片的效果（用来快速检查错误）
+    bakDir = r'../baks/'     # xmls备份地址（出现错误后恢复）
 
     lv = LabelVisual(imgDir, xmlDir, dbgDir, bakDir)
 
