@@ -51,6 +51,7 @@ class PoseAnnotation(object):
 
         # self._prepare_file_system()
         self._get_labels_and_colors()
+
     def prepare_file_system(self, inputsDir='../inputs/', outputsDir='../outputs/'):
         self.inputImageDir = os.path.join(self.inputsDir, 'images')
         self.inputAnnoDir = os.path.join(self.inputsDir, 'annotations')
@@ -59,6 +60,7 @@ class PoseAnnotation(object):
 
         if not os.path.exists(self.outputImageDir): os.makedirs(self.outputImageDir)
         if not os.path.exists(self.outputAnnoDir): os.makedirs(self.outputAnnoDir)
+
     def _get_labels_and_colors(self):
         numbers = [str(i) for i in range(1, 10)]  # [1-9]
         letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o']  # [10-18]
@@ -132,6 +134,7 @@ class PoseAnnotation(object):
             # joints = ['', -1, -1, -1]
             self.joints = []
         self.bufferJoints = []
+
     def update_matte(self):
         self.matte = np.zeros(self.frame.shape[:2]) - 7
         for idx, joint in enumerate(self.joints):
@@ -186,13 +189,12 @@ class PoseAnnotation(object):
                 f.write(line)
                 f.write('\n')
 
-    def get_text_coordinates(self, joint, radius, font_size):
+    def get_text_coordinates(self, joint, radius, font_size, shape, label=''):
         # y
         rowPair_1 = (int(joint[2] - radius - font_size[0][1]), int(joint[2] - radius))
         rowPair_2 = (int(joint[2] - font_size[0][1] / 2.0), int(joint[2] + font_size[0][1] / 2.0))
         rowPair_3 = (int(joint[2] + radius), int(joint[2] + radius + font_size[0][1]))
         rowPairs = [rowPair_1, rowPair_2, rowPair_3]
-
 
         # x
         colPair_1 = (int(joint[1] - radius - font_size[0][0]), int(joint[1] - radius))
@@ -200,35 +202,17 @@ class PoseAnnotation(object):
         colPair_3 = (int(joint[1] + radius), int(joint[1] + radius + font_size[0][0]))
         colPairs = [colPair_1, colPair_2, colPair_3]
 
-        # flags = [[True] * 3] * 3
-        # flags[1][1] = False
-
-        minCoords = (-1, -1)
-        maxCoords = (-1, -1)
-
-        minDist = 2 * (radius + max(font_size[0][0], font_size[0][1])) ** 2
-        for i in range(3):
-            for j in range(3):
-                if ((rowPairs[i][0] >= 0 and rowPairs[i][1] <= self.frame.shape[1]) and
-                            (colPairs[j][0] >= 0 and colPairs[j][1] <= self.frame.shape[0])):
-                    # flags[i][j] = False
-
-                    if i == 2 or j == 2:
-                        # minCoords = (rowPairs[i][0], colPairs[j][0])
-                        # maxCoords = (rowPairs[i][1], colPairs[j][1])
-                        minCoords = (colPairs[j][0], rowPairs[i][0])
-                        maxCoords = (colPairs[j][1], rowPairs[i][1])
-                        # print(minCoords, maxCoords)
-                        print(self.frame.shape)
-                        return minCoords, maxCoords
-
-                    dist = ((rowPairs[i][0] + rowPairs[i][1])/2.0 - joint[2]) ** 2 + \
-                           ((colPairs[j][0] + colPairs[j][1])/2.0 - joint[1]) ** 2
-                    if dist < minDist:
-                        minDist = dist
-                        minCoords = (colPairs[j][0], rowPairs[i][0])
-                        maxCoords = (colPairs[j][1], rowPairs[i][1])
-        # print minCoords, maxCoords
+        minCoords, maxCoords = (-1, -1), (-1, -1)
+        tranverse_order = [(1,0), (0, 1), (1,2), (2, 1), (2,0), (0,0), (0,2), (2,2)]
+        for j, i in tranverse_order:
+            minCoords, maxCoords = zip(colPairs[i], rowPairs[j])
+            '''
+            TODO: get more proper position of text
+            '''
+            flags = (minCoords[0] <= maxCoords[0] and minCoords[1] <= maxCoords[1]) and \
+                    (minCoords[0] >= 0 and maxCoords[0] <= shape[1]) and \
+                    (minCoords[1] >= 0 and maxCoords[1] <= shape[0])
+            if flags: return minCoords, maxCoords
         return minCoords, maxCoords
 
     def update_frame(self, x=-1, y=-1):
@@ -239,20 +223,14 @@ class PoseAnnotation(object):
             thickness = -1
             if idx == self.curJointIdx: radius=20
             cv2.circle(self.frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)],thickness)
-
             if joint[0] >= 0:
                 label = str(joint[0] + 1)
                 font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
-                # print font_size
 
-                coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
-                coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
+                # coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
+                # coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
 
-                # coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
-                # if label == '12':
-                #     coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
-
-                # coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
+                coords1, coords2 = self.get_text_coordinates(joint, radius, font_size, self.frame.shape, label)
 
                 cv2.rectangle(self.frame, coords1, coords2, self.colors[idx % len(self.colors)], -1)
                 cv2.putText(self.frame, label, (coords1[0] + 2, coords2[1] - 2), self.font, self.fontsize, (0, 0, 0), 2)
@@ -269,12 +247,12 @@ class PoseAnnotation(object):
             for idx, joint in enumerate(self.joints):
                 if joint[0] == link[0]: idx0 = idx
                 if joint[0] == link[1]: idx1 = idx
-            # print(self.joints[idx0], self.joints[idx1])
 
             if idx0 >= 0 and idx1 >= 0:
                 joint0, joint1 = self.joints[idx0], self.joints[idx1]
                 color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(self.colors[link[0]], self.colors[link[1]])]
                 cv2.line(self.frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
+
     def call_back_func(self, event, x, y, flags, param):
         if event == cv2.EVENT_MOUSEMOVE:
             self.curJointIdx = int(self.matte[y, x] / 7)
@@ -285,15 +263,13 @@ class PoseAnnotation(object):
             joint = [-1, x, y, 0]  # invisible
             self.joints.append(joint)
         self.update_frame()
+
     def annotation(self):
         self.prepare_file_system()
         self.imageList = os.listdir(self.inputImageDir)
         cidx = 0
         self.update(cidx)
         self.update_matte()
-
-        # self.joints = []
-        # print self.joints
 
         # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
@@ -324,8 +300,6 @@ class PoseAnnotation(object):
             if key == 27:
                 self.draw_static(cidx)
                 break
-
-
 
 if __name__ == '__main__':
     inputDir = '../inputs/'
