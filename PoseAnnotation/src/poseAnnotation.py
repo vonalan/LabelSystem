@@ -186,6 +186,43 @@ class PoseAnnotation(object):
                 f.write(line)
                 f.write('\n')
 
+    def get_text_coordinates(self, joint):
+        rowPair_1 = (int(joint[2] - radius - font_size[0][1]), int(joint[2] - radius))
+        rowPair_2 = (int(joint[2] - font_size[0][1] / 2.0), int(joint[2] + font_size[0][1] / 2.0))
+        rowPair_3 = (int(joint[2] + radius), int(joint[2] + radius + font_size[0][1]))
+        rowPairs = [rowPair_1, rowPair_2, rowPair_3]
+
+        colPair_1 = (int(joint[1] - radius - font_size[0][0]), int(joint[1] - radius))
+        colPair_2 = (int(joint[1] - font_size[0][0] / 2.0), int(joint[1] + font_size[0][0] / 2.0))
+        colPair_3 = (int(joint[1] + radius), int(joint[1] + radius + font_size[0][0]))
+        colPairs = [colPair_1, colPair_2, colPair_3]
+
+        flags = [[True] * 3] * 3
+        flags[1][1] = False
+
+        minCoords = (-1, -1)
+        maxCoords = (-1, -1)
+
+        minDistSquare = 2 * (radius + max(font_size[0][0], font_size[0][1])) ** 2
+        for j in range(3):
+            for i in range(3):
+                if not ((rowPairs[i][0] >= 0 and rowPairs[i][1] <= self.frame.shape[0]) and
+                            (colPairs[i][0] >= 0 and colPairs[i][1] <= self.frame.shape[1])):
+                    flags[i][j] = False
+
+                    if i == 2 or j == 2:
+                        minCoords = (rowPairs[i][0], colPairs[j][0])
+                        maxCoords = (rowPairs[i][1], colPairs[j][1])
+                        return minCoords, maxCoords
+
+                    dist = ((rowPairs[i][0] + rowPairs[i][1])/2.0 - joint[1]) ** 2 + \
+                           ((colPairs[i][0] + colPairs[i][1])/2.0 - joint[2]) ** 2
+                    if dist < minDistSquare:
+                        minDistSquare = dist
+                        minCoords = (rowPairs[i][0], colPairs[j][0])
+                        maxCoords = (rowPairs[i][1], colPairs[j][1])
+        return minCoords, maxCoords
+
     def update_frame(self, x=-1, y=-1):
         # draw_joint_points
         self.frame = copy.copy(self.bufferFrame)
@@ -200,12 +237,11 @@ class PoseAnnotation(object):
                 font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
                 # print font_size
 
-                flag = 0
+                coords1, coord2 = self.get_text_coordinates(joint)
 
-                # left
-                if not flag:
-                    coord1 = (int(joint[1] - font_size[0][0] - radius), int(joint[2] + font_size[0][1]/2.0))
-                    coord2 = (int(joint[1] - radius), int(joint[2] - font_size[0][1]/2.0))
+
+
+
 
                 # #right
                 # left_limit = int(joint[1] - font_size[0][0] - radius)
@@ -253,7 +289,6 @@ class PoseAnnotation(object):
                 cv2.rectangle(self.frame, (coord1[0], coord2[1]), (coord2[0] + 2, coord1[1] + 2),
                               self.colors[idx % len(self.colors)], -1)
                 cv2.putText(self.frame, label, coord1, self.font, self.fontsize, (0, 0, 0), 2)
-                # cv2.putText(self.frame, label, (joint[1], joint[2]), self.font, self.fontsize, (0,0,0), 2)
             if joint[3] == 0:
                 cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
                               self.colors[idx % len(self.colors)], 1)
