@@ -229,11 +229,11 @@ class PoseAnnotation(object):
 
                 # coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
                 # coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
-
                 coords1, coords2 = self.get_text_coordinates(joint, radius, font_size, self.frame.shape, label)
 
-                cv2.rectangle(self.frame, coords1, coords2, self.colors[idx % len(self.colors)], -1)
-                cv2.putText(self.frame, label, (coords1[0] + 2, coords2[1] - 2), self.font, self.fontsize, (0, 0, 0), 2)
+                cv2.rectangle(self.frame, (coords1[0], coords1[1] - 2), (coords2[0], coords2[1] + 2),
+                              self.colors[idx % len(self.colors)], -1)
+                cv2.putText(self.frame, label, (coords1[0], coords2[1]), self.font, self.fontsize, (0, 0, 0), 2)
             if joint[3] == 0:
                 cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
                               self.colors[idx % len(self.colors)], 1)
