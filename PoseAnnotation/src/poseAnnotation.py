@@ -200,25 +200,60 @@ class PoseAnnotation(object):
                 font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
                 # print font_size
 
+                flag = 0
+
                 # left
-                coord1 = (int(joint[1] - font_size[0][0] - radius), int(joint[2] + font_size[0][1]/2))
-                coord2 = (int(joint[1] - radius), int(joint[2] - font_size[0][1]/2))
+                if not flag:
+                    coord1 = (int(joint[1] - font_size[0][0] - radius), int(joint[2] + font_size[0][1]/2.0))
+                    coord2 = (int(joint[1] - radius), int(joint[2] - font_size[0][1]/2.0))
 
-                #right
-                left_limit = int(joint[1] - font_size[0][0] - radius)
-                right_limit = int(joint[1] + font_size[0][0] + radius)
-                top_limit = int(joint[2] - font_size[0][1] - radius)
-                bottom_limit = int(joint[2] + font_size[0][1] + radius)
-
-                '''
-                TODO: to limit the position of rectagle and test
-                '''
+                # #right
+                # left_limit = int(joint[1] - font_size[0][0] - radius)
+                # right_limit = int(joint[1] + font_size[0][0] + radius)
+                # top_limit = int(joint[2] - font_size[0][1] - radius)
+                # bottom_limit = int(joint[2] + font_size[0][1] + radius)
+                #
+                # '''
+                # TODO:
+                # '''
+                # if left_limit < 0:
+                #     left = right_limit - font_size[0][0]
+                #     right = right_limit
+                # elif right_limit > self.frame.shape[0]:
+                #     left = left_limit
+                #     right = left_limit + font_size[0][0]
+                #
+                # if right_limit > self.frame.shape[0]:
+                #     left = left_limit
+                #     right = left_limit + font_size[0][0]
+                # elif left_limit < 0:
+                #     left = right_limit - font_size[0][0]
+                #     right = right_limit
+                #
+                # if top_limit < 0:
+                #     top = bottom_limit - font_size[0][1]
+                #     bottom = bottom_limit
+                # elif bottom_limit > self.frame.shape[1]:
+                #     top = top_limit
+                #     bottom = top_limit + font_size[0][1]
+                #
+                # if bottom_limit > self.frame.shape[1]:
+                #     top = top_limit
+                #     bottom = top_limit + font_size[0][1]
+                # elif top_limit < 0:
+                #     top = bottom_limit - font_size[0][1]
+                #     bottom = bottom_limit
+                #
+                # cv2.rectangle(self.frame, (left, top), (right + 2, bottom + 2),
+                #               self.colors[idx % len(self.colors)], -1)
+                # '''
+                # TODO:
+                # '''
 
                 cv2.rectangle(self.frame, (coord1[0], coord2[1]), (coord2[0] + 2, coord1[1] + 2),
                               self.colors[idx % len(self.colors)], -1)
-
-                # cv2.putText(self.frame, label, (joint[1], joint[2]), self.font, self.fontsize, (0,0,0), 2)
                 cv2.putText(self.frame, label, coord1, self.font, self.fontsize, (0, 0, 0), 2)
+                # cv2.putText(self.frame, label, (joint[1], joint[2]), self.font, self.fontsize, (0,0,0), 2)
             if joint[3] == 0:
                 cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
                               self.colors[idx % len(self.colors)], 1)
@@ -258,7 +293,8 @@ class PoseAnnotation(object):
         # self.joints = []
         # print self.joints
 
-        cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
+        # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('image', self.call_back_func)
         while True:
             cv2.imshow('image', self.frame)
