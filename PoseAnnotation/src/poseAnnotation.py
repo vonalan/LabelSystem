@@ -186,41 +186,49 @@ class PoseAnnotation(object):
                 f.write(line)
                 f.write('\n')
 
-    def get_text_coordinates(self, joint):
+    def get_text_coordinates(self, joint, radius, font_size):
+        # y
         rowPair_1 = (int(joint[2] - radius - font_size[0][1]), int(joint[2] - radius))
         rowPair_2 = (int(joint[2] - font_size[0][1] / 2.0), int(joint[2] + font_size[0][1] / 2.0))
         rowPair_3 = (int(joint[2] + radius), int(joint[2] + radius + font_size[0][1]))
         rowPairs = [rowPair_1, rowPair_2, rowPair_3]
 
+
+        # x
         colPair_1 = (int(joint[1] - radius - font_size[0][0]), int(joint[1] - radius))
         colPair_2 = (int(joint[1] - font_size[0][0] / 2.0), int(joint[1] + font_size[0][0] / 2.0))
         colPair_3 = (int(joint[1] + radius), int(joint[1] + radius + font_size[0][0]))
         colPairs = [colPair_1, colPair_2, colPair_3]
 
-        flags = [[True] * 3] * 3
-        flags[1][1] = False
+        # flags = [[True] * 3] * 3
+        # flags[1][1] = False
 
         minCoords = (-1, -1)
         maxCoords = (-1, -1)
 
-        minDistSquare = 2 * (radius + max(font_size[0][0], font_size[0][1])) ** 2
-        for j in range(3):
-            for i in range(3):
-                if not ((rowPairs[i][0] >= 0 and rowPairs[i][1] <= self.frame.shape[0]) and
-                            (colPairs[i][0] >= 0 and colPairs[i][1] <= self.frame.shape[1])):
-                    flags[i][j] = False
+        minDist = 2 * (radius + max(font_size[0][0], font_size[0][1])) ** 2
+        for i in range(3):
+            for j in range(3):
+                if ((rowPairs[i][0] >= 0 and rowPairs[i][1] <= self.frame.shape[1]) and
+                            (colPairs[j][0] >= 0 and colPairs[j][1] <= self.frame.shape[0])):
+                    # flags[i][j] = False
 
                     if i == 2 or j == 2:
-                        minCoords = (rowPairs[i][0], colPairs[j][0])
-                        maxCoords = (rowPairs[i][1], colPairs[j][1])
+                        # minCoords = (rowPairs[i][0], colPairs[j][0])
+                        # maxCoords = (rowPairs[i][1], colPairs[j][1])
+                        minCoords = (colPairs[j][0], rowPairs[i][0])
+                        maxCoords = (colPairs[j][1], rowPairs[i][1])
+                        # print(minCoords, maxCoords)
+                        print(self.frame.shape)
                         return minCoords, maxCoords
 
-                    dist = ((rowPairs[i][0] + rowPairs[i][1])/2.0 - joint[1]) ** 2 + \
-                           ((colPairs[i][0] + colPairs[i][1])/2.0 - joint[2]) ** 2
-                    if dist < minDistSquare:
-                        minDistSquare = dist
-                        minCoords = (rowPairs[i][0], colPairs[j][0])
-                        maxCoords = (rowPairs[i][1], colPairs[j][1])
+                    dist = ((rowPairs[i][0] + rowPairs[i][1])/2.0 - joint[2]) ** 2 + \
+                           ((colPairs[j][0] + colPairs[j][1])/2.0 - joint[1]) ** 2
+                    if dist < minDist:
+                        minDist = dist
+                        minCoords = (colPairs[j][0], rowPairs[i][0])
+                        maxCoords = (colPairs[j][1], rowPairs[i][1])
+        # print minCoords, maxCoords
         return minCoords, maxCoords
 
     def update_frame(self, x=-1, y=-1):
@@ -237,58 +245,17 @@ class PoseAnnotation(object):
                 font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
                 # print font_size
 
-                coords1, coord2 = self.get_text_coordinates(joint)
+                coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
+                coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
 
+                # coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
+                # if label == '12':
+                #     coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
 
+                # coords1, coords2 = self.get_text_coordinates(joint, radius, font_size)
 
-
-
-                # #right
-                # left_limit = int(joint[1] - font_size[0][0] - radius)
-                # right_limit = int(joint[1] + font_size[0][0] + radius)
-                # top_limit = int(joint[2] - font_size[0][1] - radius)
-                # bottom_limit = int(joint[2] + font_size[0][1] + radius)
-                #
-                # '''
-                # TODO:
-                # '''
-                # if left_limit < 0:
-                #     left = right_limit - font_size[0][0]
-                #     right = right_limit
-                # elif right_limit > self.frame.shape[0]:
-                #     left = left_limit
-                #     right = left_limit + font_size[0][0]
-                #
-                # if right_limit > self.frame.shape[0]:
-                #     left = left_limit
-                #     right = left_limit + font_size[0][0]
-                # elif left_limit < 0:
-                #     left = right_limit - font_size[0][0]
-                #     right = right_limit
-                #
-                # if top_limit < 0:
-                #     top = bottom_limit - font_size[0][1]
-                #     bottom = bottom_limit
-                # elif bottom_limit > self.frame.shape[1]:
-                #     top = top_limit
-                #     bottom = top_limit + font_size[0][1]
-                #
-                # if bottom_limit > self.frame.shape[1]:
-                #     top = top_limit
-                #     bottom = top_limit + font_size[0][1]
-                # elif top_limit < 0:
-                #     top = bottom_limit - font_size[0][1]
-                #     bottom = bottom_limit
-                #
-                # cv2.rectangle(self.frame, (left, top), (right + 2, bottom + 2),
-                #               self.colors[idx % len(self.colors)], -1)
-                # '''
-                # TODO:
-                # '''
-
-                cv2.rectangle(self.frame, (coord1[0], coord2[1]), (coord2[0] + 2, coord1[1] + 2),
-                              self.colors[idx % len(self.colors)], -1)
-                cv2.putText(self.frame, label, coord1, self.font, self.fontsize, (0, 0, 0), 2)
+                cv2.rectangle(self.frame, coords1, coords2, self.colors[idx % len(self.colors)], -1)
+                cv2.putText(self.frame, label, (coords1[0] + 2, coords2[1] - 2), self.font, self.fontsize, (0, 0, 0), 2)
             if joint[3] == 0:
                 cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
                               self.colors[idx % len(self.colors)], 1)
