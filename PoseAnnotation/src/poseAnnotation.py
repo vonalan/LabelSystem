@@ -12,6 +12,7 @@ from __future__ import division
 
 import os
 import copy
+import math
 
 import numpy as np
 import cv2
@@ -19,6 +20,7 @@ import cv2
 NUM_JOINTS = 15
 JOINT_TEMPLATE = ['', -1, -1, -1]
 # JOINTS_TEMPLATE = NUM_JOINTS * JOINT_TEMPLATE
+
 class Joint(object):
     def __init__(self):
         self.label = ''
@@ -31,11 +33,16 @@ class PoseAnnotation(object):
         self.frame = None
         self.bufferFrame = None
         self.matte = None
-        self.joints = []
-        self.bufferJoints = []
 
-        self.curJoint = [-1, -1, -1, -1]
+        # TODO: len(self.joints) == num_persons * num_joints * len(joint_template)
+        self.joints = []
+        # self.bufferJoints = []
+        # self.curJoint = [-1, -1, -1, -1]
         self.curJointIdx = -1
+
+        # TODO: persons
+        # self.persons = 0
+        # self.curPersonIdx = -1
 
         self.names = []
         self.labels = []
@@ -62,8 +69,8 @@ class PoseAnnotation(object):
         if not os.path.exists(self.outputAnnoDir): os.makedirs(self.outputAnnoDir)
 
     def _get_labels_and_colors(self):
-        numbers = [str(i) for i in range(1, 10)]  # [1-9]
-        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o']  # [10-18]
+        numbers = [str(i) for i in range(1, 10)]  # [1-10]
+        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']  # [10-19]
         labels = numbers + letters
         names = [
             "Right ankle",
@@ -120,6 +127,7 @@ class PoseAnnotation(object):
         self.names = names
 
     def update(self, index):
+        print(index)
         imagePath = os.path.join(self.inputImageDir, self.imageList[index])
         annoPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
         self.frame = cv2.imread(imagePath)
@@ -206,9 +214,6 @@ class PoseAnnotation(object):
         tranverse_order = [(1,0), (0, 1), (1,2), (2, 1), (2,0), (0,0), (0,2), (2,2)]
         for j, i in tranverse_order:
             minCoords, maxCoords = zip(colPairs[i], rowPairs[j])
-            '''
-            TODO: get more proper position of text
-            '''
             flags = (minCoords[0] <= maxCoords[0] and minCoords[1] <= maxCoords[1]) and \
                     (minCoords[0] >= 0 and maxCoords[0] <= shape[1]) and \
                     (minCoords[1] >= 0 and maxCoords[1] <= shape[0])
@@ -216,27 +221,7 @@ class PoseAnnotation(object):
         return minCoords, maxCoords
 
     def update_frame(self, x=-1, y=-1):
-        # draw_joint_points
         self.frame = copy.copy(self.bufferFrame)
-        for idx, joint in enumerate(self.joints):
-            radius = 5
-            thickness = -1
-            if idx == self.curJointIdx: radius=20
-            cv2.circle(self.frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)],thickness)
-            if joint[0] >= 0:
-                label = str(joint[0] + 1)
-                font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
-
-                # coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
-                # coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
-                coords1, coords2 = self.get_text_coordinates(joint, radius, font_size, self.frame.shape, label)
-
-                cv2.rectangle(self.frame, (coords1[0], coords1[1] - 2), (coords2[0], coords2[1] + 2),
-                              self.colors[idx % len(self.colors)], -1)
-                cv2.putText(self.frame, label, (coords1[0], coords2[1]), self.font, self.fontsize, (0, 0, 0), 2)
-            if joint[3] == 0:
-                cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
-                              self.colors[idx % len(self.colors)], 1)
 
         # draw links between points
         for link in self.links:
@@ -253,6 +238,40 @@ class PoseAnnotation(object):
                 color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(self.colors[link[0]], self.colors[link[1]])]
                 cv2.line(self.frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
 
+                center = int((joint0[1] + joint1[1]) / 2.0), int((joint0[2] + joint1[2]) / 2.0)
+                mainAxis = int(((joint0[1] - joint1[1]) ** 2 + (joint0[2] - joint1[2]) ** 2) ** 0.5 * 0.5)
+                subAxis = 3
+                algle = int(math.degrees(math.atan2(joint0[2] - joint1[2], joint0[1] - joint1[1])))
+
+                polygon = cv2.ellipse2Poly(center, (mainAxis, subAxis), algle, 0, 360, 1)
+                cv2.fillConvexPoly(self.frame, polygon, color)
+
+        # draw_joint_points
+        for idx, joint in enumerate(self.joints):
+            radius = 5
+            thickness = -1
+            if idx == self.curJointIdx: radius=20
+            cv2.circle(self.frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)],thickness)
+            # if joint[3] == 0:
+            #     cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
+            #                   self.colors[idx % len(self.colors)], 1)
+            if joint[0] >= 0:
+                label = str(joint[0] + 1)
+                bgColor = self.colors[idx % len(self.colors)]
+                fgColor = (0, 0, 0)
+                if joint[3] == 0:
+                    bgColor = (0, 0, 0)
+                    fgColor = (255, 255, 255)
+                font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
+
+                # TODO: more proper position of text
+                # coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
+                # coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
+                coords1, coords2 = self.get_text_coordinates(joint, radius, font_size, self.frame.shape, label)
+
+                cv2.rectangle(self.frame, (coords1[0], coords1[1] - 2), (coords2[0], coords2[1] + 2), bgColor, -1)
+                cv2.putText(self.frame, label, (coords1[0], coords2[1]), self.font, self.fontsize, fgColor, 2)
+
     def call_back_func(self, event, x, y, flags, param):
         if event == cv2.EVENT_MOUSEMOVE:
             self.curJointIdx = int(self.matte[y, x] / 7)
@@ -262,6 +281,7 @@ class PoseAnnotation(object):
         if event == cv2.EVENT_RBUTTONUP:
             joint = [-1, x, y, 0]  # invisible
             self.joints.append(joint)
+        self.update_matte()
         self.update_frame()
 
     def annotation(self):
@@ -278,8 +298,8 @@ class PoseAnnotation(object):
             cv2.imshow('image', self.frame)
             cv2.imshow('matte', self.matte)
             key = cv2.waitKey(20)
-            # print self.curJointIdx
 
+            # delete
             if self.curJointIdx >= 0 and key == ord('x'):
                 label = self.joints[self.curJointIdx][0]
                 del self.joints[self.curJointIdx]
@@ -287,6 +307,7 @@ class PoseAnnotation(object):
                     if joint[0] > label: self.joints[idx][0] -= 1
                 self.curJointIdx = -1
 
+            # add label
             if self.curJointIdx >= 0 and key in [ord(c) for c in self.labels]:
                 label = self.labels.index(chr(key))
                 if label != self.joints[self.curJointIdx][0]:
@@ -294,12 +315,24 @@ class PoseAnnotation(object):
                         if joint[0] >= label: self.joints[idx][0] += 1
                 self.joints[self.curJointIdx][0] = self.labels.index(chr(key))
 
-            self.update_frame()
-            self.update_matte()
+            # TODO: persons
+            # switch person
+            if key == 100: # blankspace
+                # self.curPersonIdx = (self.curPersonIdx + 1 % len(self.persons))
+                pass
 
+            if key == ord('d'):
+                cidx = min(cidx + 1, len(self.imageList) - 1)
+                self.update(cidx)
+            if key == ord('a'):
+                cidx = max(cidx - 1, 0)
+                self.update(cidx)
             if key == 27:
                 self.draw_static(cidx)
                 break
+
+            self.update_frame()
+            self.update_matte()
 
 if __name__ == '__main__':
     inputDir = '../inputs/'
