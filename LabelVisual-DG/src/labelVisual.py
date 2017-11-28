@@ -318,7 +318,7 @@ class LabelVisual(object):
             # step 01 -- back up xmls
             srcxmlname = os.path.join(self.xmlDir, self.name[:-4] + '.xml')
             dstxmlname = os.path.join(self.bakXmlDir, self.name[:-4] + '.xml')
-            if( not os.path.exists(dstxmlname)):
+            if( not os.path.exists(dstxmlname)) and (os.path.exists(srcxmlname)):
                 shutil.copy(srcxmlname, dstxmlname)
             # step 03 -- write back xmls
             self.writeXML(shape, labels, rects, srcxmlname)
@@ -354,15 +354,15 @@ class LabelVisual(object):
         #     shutil.copy(srcimgname, dstimgname)
 
         # step 02 -- parse xmls
-        self.boxes = self.parseXml(xmlname)
+        # self.boxes = self.parseXml(xmlname)
         #
-        # try:
-        #     self.boxes = self.parseXml(xmlname)
-        # except:
-        #     self.boxes = []
-        #     print('No Label!!!')
-        # else:
-        #     pass
+        try:
+            self.boxes = self.parseXml(xmlname)
+        except:
+            self.boxes = []
+            print('No Label!!!')
+        else:
+            pass
         ''''''
 
     def resize(self, frame=None, scale=None):
@@ -707,8 +707,8 @@ if __name__ == '__main__':
     指定相应的地址。
     标注完后只需要xmlDir里面的文件。
     '''
-    imgDir = r'../imgs/'    # images地址
-    xmlDir = r'../xmls/'    # xmls地址
+    imgDir = r'E:\Backups\Datasets\alphamatting.com\LD\input_test_lowres'    # images地址
+    xmlDir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_test_lowres\xmls'    # xmls地址
     dbgDir = r'../dbgs/'    # 修改xml之后图片的效果（用来快速检查错误）
     bakDir = r'../baks/'     # xmls备份地址（出现错误后恢复）
 
