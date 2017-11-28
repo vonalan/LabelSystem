@@ -18,7 +18,7 @@ import numpy as np
 import cv2
 
 NUM_JOINTS = 15
-JOINT_TEMPLATE = ['', -1, -1, -1]
+JOINT_TEMPLATE = [-1, -1, -1, -1]
 # JOINTS_TEMPLATE = NUM_JOINTS * JOINT_TEMPLATE
 
 class Joint(object):
@@ -39,10 +39,12 @@ class PoseAnnotation(object):
         # self.bufferJoints = []
         # self.curJoint = [-1, -1, -1, -1]
         self.curJointIdx = -1
+        self.curJoint = []
 
         # TODO: persons
         # self.persons = 0
-        # self.curPersonIdx = -1
+        self.curPersonIdx = -1
+        self.curJoints = []
 
         self.names = []
         self.labels = []
@@ -133,19 +135,23 @@ class PoseAnnotation(object):
         self.frame = cv2.imread(imagePath)
         self.bufferFrame = copy.copy(self.frame)
 
+        # TODO: read multiple joints-objects
+        self.joints = list()
         try:
             with open(annoPath, 'r') as f:
                 lines = [[int(item) for item in line] for line in
                          [line.strip().split(', ') for line in f]]
-            self.joints = [[joint[2], joint[0], joint[1], -1] for joint in lines]
+            joints = [[joint[2], joint[0], joint[1], -1] for joint in lines]
+            self.joints.append([0, 1, joints])
+            self.curPersonIdx = 0
+            self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
+            # self.bufferJoints = []
         except Exception:
-            # joints = ['', -1, -1, -1]
-            self.joints = []
-        self.bufferJoints = []
+            pass
 
     def update_matte(self):
         self.matte = np.zeros(self.frame.shape[:2]) - 7
-        for idx, joint in enumerate(self.joints):
+        for idx, joint in enumerate(self.curJoints):
             color = 7 * idx
             cv2.circle(self.matte, (joint[1], joint[2]), 20, color, -1)
 
@@ -154,46 +160,24 @@ class PoseAnnotation(object):
         imagePath = os.path.join(self.outputImageDir, image)
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
 
-        # draw_joint_points
-        frame = copy.copy(self.bufferFrame)
-        for idx, joint in enumerate(self.joints):
-            if joint[0] >= len(self.names):
-                continue
-            radius = 5
-            thickness = -1
-            if idx == self.curJointIdx: radius = 20
-            # print joint
-            cv2.circle(frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)], thickness)
-            if joint[0] >= 0:
-                cv2.putText(frame, str(joint[0] + 1), (joint[1], joint[2]), self.font, self.fontsize, (0, 0, 0), 1)
-        # draw links between points
-        for link in self.links:
-            if link[1] >= len(self.labels):
-                continue
+        # TODO: write image
+        # write image
 
-            idx0, idx1 = -1, -1
-            for idx, joint in enumerate(self.joints):
-                if joint[0] == link[0]: idx0 = idx
-                if joint[0] == link[1]: idx1 = idx
-            # print(self.joints[idx0], self.joints[idx1])
-
-            if idx0 >= 0 and idx1 >= 0:
-                joint0, joint1 = self.joints[idx0], self.joints[idx1]
-                color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(self.colors[link[0]], self.colors[link[1]])]
-                cv2.line(frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
-        cv2.imwrite(imagePath, frame)
-
+        # write xml/txt
         with open(annoPath, 'w') as f:
-            for i in range(len(self.names)):
-                joint = [i, -1, -1, -1]
+            for _, curJoints in enumerate(self.joints):
+                joints = []
+                for j, name in enumerate(self.names):
+                    joint = [j, -1, -1, -1]
 
-                idx = -1
-                for j in range(len(self.joints)):
-                    if i == self.joints[j][0]:
-                        idx = j
-                if idx >= 0: joint = self.joints[idx]
+                    idx = -1
+                    for k, jnt in enumerate(curJoints[-1]):
+                        if j == jnt[0]:
+                            idx = j
+                    if idx >= 0: joint = curJoints[-1][idx]
+                    joints.extend(joint)
 
-                line = str(joint).lstrip('[').rstrip(']')
+                line = ' '.join([str(item) for item in joints])
                 f.write(line)
                 f.write('\n')
 
@@ -223,18 +207,20 @@ class PoseAnnotation(object):
     def update_frame(self, x=-1, y=-1):
         self.frame = copy.copy(self.bufferFrame)
 
+        # TODO: how to deal with the invalid joints
+
         # draw links between points
         for link in self.links:
             if link[1] >= len(self.labels):
                 continue
 
             idx0, idx1 = -1, -1
-            for idx, joint in enumerate(self.joints):
+            for idx, joint in enumerate(self.curJoints):
                 if joint[0] == link[0]: idx0 = idx
                 if joint[0] == link[1]: idx1 = idx
 
             if idx0 >= 0 and idx1 >= 0:
-                joint0, joint1 = self.joints[idx0], self.joints[idx1]
+                joint0, joint1 = self.curJoints[idx0], self.curJoints[idx1]
                 color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(self.colors[link[0]], self.colors[link[1]])]
                 cv2.line(self.frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
 
@@ -247,7 +233,7 @@ class PoseAnnotation(object):
                 cv2.fillConvexPoly(self.frame, polygon, color)
 
         # draw_joint_points
-        for idx, joint in enumerate(self.joints):
+        for idx, joint in enumerate(self.curJoints):
             radius = 5
             thickness = -1
             if idx == self.curJointIdx: radius=20
@@ -277,10 +263,10 @@ class PoseAnnotation(object):
             self.curJointIdx = int(self.matte[y, x] / 7)
         if event == cv2.EVENT_LBUTTONUP:
             joint = [-1, x, y, 1] # visible
-            self.joints.append(joint)
+            self.curJoints.append(joint)
         if event == cv2.EVENT_RBUTTONUP:
             joint = [-1, x, y, 0]  # invisible
-            self.joints.append(joint)
+            self.curJoints.append(joint)
         self.update_matte()
         self.update_frame()
 
@@ -299,28 +285,47 @@ class PoseAnnotation(object):
             cv2.imshow('matte', self.matte)
             key = cv2.waitKey(20)
 
+            # joint-level
             # delete
             if self.curJointIdx >= 0 and key == ord('x'):
-                label = self.joints[self.curJointIdx][0]
-                del self.joints[self.curJointIdx]
-                for idx, joint in enumerate(self.joints):
-                    if joint[0] > label: self.joints[idx][0] -= 1
+                label = self.curJoints[self.curJointIdx][0]
+                del self.curJoints[self.curJointIdx]
+                for idx, joint in enumerate(self.curJoints):
+                    if joint[0] > label: self.curJoints[idx][0] -= 1
                 self.curJointIdx = -1
-
-            # add label
+            # add
             if self.curJointIdx >= 0 and key in [ord(c) for c in self.labels]:
                 label = self.labels.index(chr(key))
-                if label != self.joints[self.curJointIdx][0]:
-                    for idx, joint in enumerate(self.joints):
-                        if joint[0] >= label: self.joints[idx][0] += 1
-                self.joints[self.curJointIdx][0] = self.labels.index(chr(key))
+                if label != self.curJoints[self.curJointIdx][0]:
+                    for idx, joint in enumerate(self.curJoints):
+                        if joint[0] >= label: self.curJoints[idx][0] += 1
+                self.curJoints[self.curJointIdx][0] = self.labels.index(chr(key))
 
-            # TODO: persons
-            # switch person
-            if key == 100: # blankspace
-                # self.curPersonIdx = (self.curPersonIdx + 1 % len(self.persons))
-                pass
+            # TODO: skip control
+            # import functools
+            # SC = functools.reduce(lambda x, y: x * (y[0] != -1), self.curJoints, True)
 
+            # person-level
+            # switch
+            if key == 32: # blankspace
+                self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
+                self.curJoints = self.joints[self.curPersonIdx][-1] # reference
+                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d'%\
+                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+            if key == ord('g'): # add
+                self.joints.append([len(self.joints), -1, []])
+                self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
+                self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
+                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d' % \
+                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+            if key == ord('h'): # delete
+                del self.joints[self.curPersonIdx]
+                self.curPersonIdx = (self.curPersonIdx - 1) % len(self.joints)
+                self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
+                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d' % \
+                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+
+            # frame-level
             if key == ord('d'):
                 cidx = min(cidx + 1, len(self.imageList) - 1)
                 self.update(cidx)
