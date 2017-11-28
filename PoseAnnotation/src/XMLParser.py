@@ -9,9 +9,16 @@ class XMLParser(object):
         self.prefix_template = tempalte_prefix
         self.object_template = template_object
 
+    # TODO: besides boxes, the size of image also need to be returned to reconstruct the widht and height of boxes
     def parseXML(self, filename):
         tree = et.parse(filename)
         root = tree.getroot()
+
+        sizes = root.find('size')
+        width = int(sizes.find('width').text)
+        height = int(sizes.find('height').text)
+        sizes = (width, height)
+
         boxes = []
         for obj in root.iter('object'):
             # labelname = obj.find('name').text
@@ -22,7 +29,7 @@ class XMLParser(object):
             xmax = int(bndbox.find('xmax').text)
             ymax = int(bndbox.find('ymax').text)
             boxes.append([label, xmin, ymin, xmax, ymax])
-        return boxes
+        return sizes, boxes
 
     def writeXML(self, sizes, boxes, outname):
         # sizes = [shape[1], shape[0]]
@@ -52,8 +59,9 @@ class XMLParser(object):
         outfile.write('</annotation>')
         outfile.close()
 
+    # TODO: scale width and height of boxes to range of [0,1]
     def xml_to_txt(self, xml_path, txt_path):
-        boxes = self.parseXML(xml_path)
+        sizes, boxes = self.parseXML(xml_path)
         with open(txt_path, 'w') as f:
             for box in boxes:
                 box = [str(i) for i in box]
@@ -61,13 +69,15 @@ class XMLParser(object):
                 line = '\t'.join(box)
                 f.write(line)
                 f.write('\n')
+        return sizes
 
-    def txt_to_xml(self, txtname, xmlname):
+    # TODO: reconstruct width and height boxes from range of [0, 1]
+    def txt_to_xml(self, sizes, txtname, xmlname):
         with open(txtname, 'r') as f:
             lines = f.readlines()
             boxes = [[int(item) for item in line.strip().split()] for line in lines]
             print boxes
-        # self.writeXML((544, 960), boxes, xmlname)
+        self.writeXML(sizes, boxes, xmlname)
 
 if __name__ == '__main__':
     template_prefix = './template_prefix.xml'
@@ -85,5 +95,5 @@ if __name__ == '__main__':
         xml_path = os.path.join(xml_dir, image_name[:-4] + '.xml')
         txt_path = os.path.join(txt_dir, image_name[:-4] + '.txt')
 
-        parser.xml_to_txt(xml_path, txt_path)
-        parser.txt_to_xml(txt_path, xml_path)
+        sizes = parser.xml_to_txt(xml_path, txt_path)
+        parser.txt_to_xml(sizes, txt_path, xml_path)
