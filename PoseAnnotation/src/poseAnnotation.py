@@ -40,7 +40,6 @@ class PoseAnnotation(object):
         # TODO: len(self.joints) == num_persons * num_joints * len(joint_template)
         self.joints = []
         # self.bufferJoints = []
-        # self.curJoint = [-1, -1, -1, -1]
         self.curJointIdx = -1
         self.curJoint = []
 
@@ -223,6 +222,7 @@ class PoseAnnotation(object):
             thickness = -1
             if idx == self.curJointIdx: radius=20
             cv2.circle(self.frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)],thickness)
+            # TODO: replace
             # if joint[3] == 0:
             #     cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
             #                   self.colors[idx % len(self.colors)], 1)
@@ -247,11 +247,17 @@ class PoseAnnotation(object):
         if event == cv2.EVENT_MOUSEMOVE:
             self.curJointIdx = int(self.matte[y, x] / 7)
         if event == cv2.EVENT_LBUTTONUP:
-            joint = [-1, x, y, 1] # visible
-            self.curJoints.append(joint)
+            if len(self.joints):
+                joint = [-1, x, y, 1] # visible
+                self.curJoints.append(joint)
+            else:
+                print 'Create a person object first! '
         if event == cv2.EVENT_RBUTTONUP:
-            joint = [-1, x, y, 0]  # invisible
-            self.curJoints.append(joint)
+            if len(self.joints):
+                joint = [-1, x, y, 0]  # invisible
+                self.curJoints.append(joint)
+            else:
+                print 'Create a person object first! '
         self.update_matte()
         self.update_frame()
 

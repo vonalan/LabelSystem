@@ -87,7 +87,7 @@ class XMLParser(object):
                     joints.append(curJoints)
                     count += 1
                     curJoints = [-1, -1, []]
-                curJoints[-1].append([line[-1], line[0], line[1], 1])
+                curJoints[-1].append([-1, line[0], line[1], 1])
             if len(curJoints):
                 joints.append(curJoints)
         except Exception:
