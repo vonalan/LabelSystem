@@ -17,6 +17,8 @@ import math
 import numpy as np
 import cv2
 
+import xmlParser
+
 NUM_JOINTS = 15
 JOINT_TEMPLATE = [-1, -1, -1, -1]
 # JOINTS_TEMPLATE = NUM_JOINTS * JOINT_TEMPLATE
@@ -30,6 +32,7 @@ class Joint(object):
 
 class PoseAnnotation(object):
     def __init__(self, inputsDir, outputDir):
+        self.xmlParser = None
         self.frame = None
         self.bufferFrame = None
         self.matte = None
@@ -71,8 +74,8 @@ class PoseAnnotation(object):
         if not os.path.exists(self.outputAnnoDir): os.makedirs(self.outputAnnoDir)
 
     def _get_labels_and_colors(self):
-        numbers = [str(i) for i in range(1, 10)]  # [1-10]
-        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']  # [10-19]
+        numbers = [str(i % 10) for i in range(1, 11)] # [1-10]
+        letters = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p']  # [11-20]
         labels = numbers + letters
         names = [
             "Right ankle",
@@ -129,25 +132,20 @@ class PoseAnnotation(object):
         self.names = names
 
     def update(self, index):
-        print(index)
         imagePath = os.path.join(self.inputImageDir, self.imageList[index])
         annoPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
         self.frame = cv2.imread(imagePath)
         self.bufferFrame = copy.copy(self.frame)
 
-        # TODO: read multiple joints-objects
-        self.joints = list()
-        try:
-            with open(annoPath, 'r') as f:
-                lines = [[int(item) for item in line] for line in
-                         [line.strip().split(', ') for line in f]]
-            joints = [[joint[2], joint[0], joint[1], -1] for joint in lines]
-            self.joints.append([0, 1, joints])
-            self.curPersonIdx = 0
-            self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
-            # self.bufferJoints = []
-        except Exception:
-            pass
+        # self.joints = self.xmlParser.parse_xml()
+        self.joints = self.xmlParser.parse_txt_v1(annoPath)
+        if len(self.joints):
+            self.curJoints = self.joints[self.curPersonIdx][-1]
+        else:
+            self.curJoints = []
+
+        # TODO:
+        self.curPersonIdx = 0
 
     def update_matte(self):
         self.matte = np.zeros(self.frame.shape[:2]) - 7
@@ -157,29 +155,16 @@ class PoseAnnotation(object):
 
     def draw_static(self, index):
         image = self.imageList[index]
-        imagePath = os.path.join(self.outputImageDir, image)
-        annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
 
         # TODO: write image
         # write image
+        imagePath = os.path.join(self.outputImageDir, image)
 
         # write xml/txt
-        with open(annoPath, 'w') as f:
-            for _, curJoints in enumerate(self.joints):
-                joints = []
-                for j, name in enumerate(self.names):
-                    joint = [j, -1, -1, -1]
-
-                    idx = -1
-                    for k, jnt in enumerate(curJoints[-1]):
-                        if j == jnt[0]:
-                            idx = j
-                    if idx >= 0: joint = curJoints[-1][idx]
-                    joints.extend(joint)
-
-                line = ' '.join([str(item) for item in joints])
-                f.write(line)
-                f.write('\n')
+        annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
+        self.xmlParser.write_txt(self.frame.shape, self.names, self.joints, annoPath)
+        annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.xml')
+        self.xmlParser.write_xml(self.frame.shape, self.names, self.joints, annoPath)
 
     def get_text_coordinates(self, joint, radius, font_size, shape, label=''):
         # y
@@ -308,10 +293,11 @@ class PoseAnnotation(object):
             # person-level
             # switch
             if key == 32: # blankspace
-                self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
-                self.curJoints = self.joints[self.curPersonIdx][-1] # reference
-                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d'%\
-                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+                if len(self.joints):
+                    self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
+                    self.curJoints = self.joints[self.curPersonIdx][-1] # reference
+                    print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d'%\
+                          (len(self.joints), self.curPersonIdx, self.curJointIdx)
             if key == ord('g'): # add
                 self.joints.append([len(self.joints), -1, []])
                 self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
@@ -340,7 +326,13 @@ class PoseAnnotation(object):
             self.update_matte()
 
 if __name__ == '__main__':
+    template_prefix = './template_prefix.xml'
+    template_person = './template_person.xml'
+    template_object = './template_object.xml'
+    parser = xmlParser.XMLParser(template_prefix, template_person, template_object)
+
     inputDir = '../inputs/'
     outputDir = '../outputs'
     pa = PoseAnnotation(inputDir, outputDir)
+    pa.xmlParser = parser
     pa.annotation()
