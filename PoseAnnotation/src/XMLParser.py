@@ -10,29 +10,30 @@ class XMLParser(object):
         self.person_template = template_person
         self.object_template = template_object
 
-    # TODO: besides boxes, the size of image also need to be returned to reconstruct the widht and height of boxes
     def parse_xml(self, filename):
-        # TODO: add
         pass
-        # tree = et.parse(filename)
-        # root = tree.getroot()
-        #
-        # sizes = root.find('size')
-        # width = int(sizes.find('width').text)
-        # height = int(sizes.find('height').text)
-        # sizes = (width, height)
-        #
-        # boxes = []
-        # for obj in root.iter('object'):
-        #     # labelname = obj.find('name').text
-        #     label = int(obj.find('name').text)
-        #     bndbox = obj.find('bndbox')
-        #     xmin = int(bndbox.find('xmin').text)
-        #     ymin = int(bndbox.find('ymin').text)
-        #     xmax = int(bndbox.find('xmax').text)
-        #     ymax = int(bndbox.find('ymax').text)
-        #     boxes.append([label, xmin, ymin, xmax, ymax])
-        # return sizes, boxes
+        tree = et.parse(filename)
+        root = tree.getroot()
+
+        sizes = root.find('size')
+        width = int(sizes.find('width').text)
+        height = int(sizes.find('height').text)
+        sizes = (width, height)
+
+        joints = []
+        for person in root.iter('person'):
+            curPerson = [-1, -1, []]
+            curPersonIdx = int(person.find('name').text)
+            curPerson[0] = curPersonIdx
+            for object in person.iter('object'):
+                curJointIdx = int(object.find('name').text)
+                x = int(object.find('joint').find('x').text)
+                y = int(object.find('joint').find('y').text)
+                status = int(object.find('status').text)
+                # curPerson[-1].append([curJointIdx, x, y, status]) # for debug
+                curPerson[-1].append([-1, x, y, status])
+            joints.append(curPerson)
+        return sizes, joints
 
     def write_xml(self, shape, names, joints, filepath):
         sizes = [shape[1], shape[0]]
@@ -58,7 +59,7 @@ class XMLParser(object):
 
         for curJoints in joints:
             qtemline = copy.copy(org_person)
-            qtemline = qtemline.replace('$name', str(curJoints[0]))
+            qtemline = qtemline.replace('$name$', str(curJoints[0]))
             outfile.write(qtemline)
             for joint in curJoints[-1]:
                 otemline = copy.copy(org_object)
@@ -72,27 +73,29 @@ class XMLParser(object):
         outfile.close()
 
     def parse_txt_v1(self, filepath, num_features=4):
+        sizes = (-1, -1)
         joints = []
-        try:
-            with open(filepath, 'r') as f:
-                lines = f.readlines()
-            # TODO: if no intersection between two consecutive person
-            history = []
-            curJoints = [-1, -1, []]
-            count = 0
-            for i, line in enumerate(lines):
-                line = [int(item) for item in line.strip().split(',')]
-                if line[-1] in history:
-                    curJoints[0] = count
-                    joints.append(curJoints)
-                    count += 1
-                    curJoints = [-1, -1, []]
-                curJoints[-1].append([-1, line[0], line[1], 1])
-            if len(curJoints):
+        with open(filepath, 'r') as f:
+            lines = f.readlines()
+        # TODO: if there is no intersection between two consecutive person object
+        history = []
+        curJoints = [-1, -1, []]
+        count = 0
+        for i, line in enumerate(lines):
+            line = [int(item) for item in line.strip().split(',')]
+            if line[-1] in history:
+                curJoints[0] = count
                 joints.append(curJoints)
-        except Exception:
-            pass
-        return joints
+                count += 1
+                curJoints = [-1, -1, []]
+                history = []
+            # curJoints[-1].append([line[-1], line[0], line[1], 1]) # for debug
+            curJoints[-1].append([-1, line[0], line[1], 1])
+            history.append(line[-1])
+        if len(curJoints):
+            curJoints[0] = count
+            joints.append(curJoints)
+        return sizes, joints
 
     def parse_txt(self, filepath, num_features=4):
         joints = []
@@ -117,7 +120,7 @@ class XMLParser(object):
                     idx = -1
                     for k, jnt in enumerate(curJoints[-1]):
                         if j == jnt[0]:
-                            idx = j
+                            idx = k
                     if idx >= 0: joint = curJoints[-1][idx]
                     joints.extend(joint)
 
@@ -125,29 +128,13 @@ class XMLParser(object):
                 f.write(line)
                 f.write('\n')
 
-    # TODO: scale width and height of boxes to range of [0,1]
     def xml_to_txt(self, xml_path, txt_path):
         # TODO: add
         pass
-        # sizes, boxes = self.parseXML(xml_path)
-        # with open(txt_path, 'w') as f:
-        #     for box in boxes:
-        #         box = [str(i) for i in box]
-        #         print box
-        #         line = '\t'.join(box)
-        #         f.write(line)
-        #         f.write('\n')
-        # return sizes
 
-    # TODO: reconstruct width and height boxes from range of [0, 1]
     def txt_to_xml(self, sizes, txtname, xmlname):
         # TODO: add
         pass
-        # with open(txtname, 'r') as f:
-        #     lines = f.readlines()
-        #     boxes = [[int(item) for item in line.strip().split()] for line in lines]
-        #     print boxes
-        # self.writeXML(sizes, boxes, xmlname)
 
 if __name__ == '__main__':
     template_prefix = './template_prefix.xml'

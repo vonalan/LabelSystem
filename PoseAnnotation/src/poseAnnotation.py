@@ -13,6 +13,7 @@ from __future__ import division
 import os
 import copy
 import math
+import functools
 
 import numpy as np
 import cv2
@@ -25,8 +26,16 @@ JOINT_TEMPLATE = [-1, -1, -1, -1]
 
 class Joint(object):
     def __init__(self):
-        self.label = ''
-        self.pos = [0]
+        self.label = -1
+        self.x = -1
+        self.y = -1
+        self.status = 1
+
+class Person(object):
+    def __init__(self):
+        self.name = -1
+        self.status = -1 # not used
+        self.joints = []
 
 
 
@@ -41,7 +50,7 @@ class PoseAnnotation(object):
         self.joints = []
         # self.bufferJoints = []
         self.curJointIdx = -1
-        self.curJoint = []
+        # self.curJoint = []
 
         # TODO: persons
         # self.persons = 0
@@ -132,19 +141,26 @@ class PoseAnnotation(object):
 
     def update(self, index):
         imagePath = os.path.join(self.inputImageDir, self.imageList[index])
-        annoPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
+
         self.frame = cv2.imread(imagePath)
         self.bufferFrame = copy.copy(self.frame)
 
-        # self.joints = self.xmlParser.parse_xml()
-        self.joints = self.xmlParser.parse_txt_v1(annoPath)
+        try:
+            xmlPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.xml')
+            _, self.joints = self.xmlParser.parse_xml(xmlPath)
+
+            # txtPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
+            # _, self.joints = self.xmlParser.parse_txt_v1(txtPath)
+        except Exception:
+            self.joints = []
+
         if len(self.joints):
+            self.curPersonIdx = 0
             self.curJoints = self.joints[self.curPersonIdx][-1]
         else:
+            # self.joints = []
+            self.curPersonIdx = -1
             self.curJoints = []
-
-        # TODO:
-        self.curPersonIdx = 0
 
     def update_matte(self):
         self.matte = np.zeros(self.frame.shape[:2]) - 7
@@ -153,17 +169,74 @@ class PoseAnnotation(object):
             cv2.circle(self.matte, (joint[1], joint[2]), 20, color, -1)
 
     def draw_static(self, index):
-        image = self.imageList[index]
+        frame = copy.copy(self.bufferFrame)
 
-        # TODO: write image
+        # draw image
+        for person in self.joints:
+            curJoints = person[-1]
+
+            # draw links between points
+            for link in self.links:
+                if link[1] >= len(self.labels):
+                    continue
+
+                idx0, idx1 = -1, -1
+                for idx, joint in enumerate(curJoints):
+                    if joint[0] == link[0]: idx0 = idx
+                    if joint[0] == link[1]: idx1 = idx
+
+                if idx0 >= 0 and idx1 >= 0:
+                    joint0, joint1 = curJoints[idx0], curJoints[idx1]
+                    # TODO:
+                    color0 = (112, 112, 112) if joint0[-1] == 0 else self.colors[link[0]]
+                    color1 = (112, 112, 112) if joint1[-1] == 0 else self.colors[link[1]]
+                    color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(color0, color1)]
+                    cv2.line(frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
+
+                    center = int((joint0[1] + joint1[1]) / 2.0), int((joint0[2] + joint1[2]) / 2.0)
+                    mainAxis = int(((joint0[1] - joint1[1]) ** 2 + (joint0[2] - joint1[2]) ** 2) ** 0.5 * 0.5)
+                    subAxis = 3
+                    algle = int(math.degrees(math.atan2(joint0[2] - joint1[2], joint0[1] - joint1[1])))
+
+                    polygon = cv2.ellipse2Poly(center, (mainAxis, subAxis), algle, 0, 360, 1)
+                    cv2.fillConvexPoly(frame, polygon, color)
+
+            # draw_joint_points and labels
+            for idx, joint in enumerate(curJoints):
+                # TODO:
+                radius = 20 if idx == self.curJointIdx else 5
+                color = (112, 112, 112) if joint[-1] == 0 else self.colors[idx % len(self.colors)]
+                cv2.circle(frame, (joint[1], joint[2]), radius, color, -1)
+
+                if joint[0] >= 0:
+                    label = str(joint[0] + 1)
+                    bgColor = self.colors[idx % len(self.colors)]
+                    fgColor = (0, 0, 0)
+                    if joint[3] == 0:
+                        bgColor = (112, 112, 112)
+                        fgColor = (255, 255, 255)
+                    font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
+
+                    # TODO: more proper position of text
+                    # coords1 = (int(joint[1] - radius - font_size[0][0]) - 2, int(joint[2] - font_size[0][1]/2.0) - 2)
+                    # coords2 = (int(joint[1] - radius) + 2, int(joint[2] + font_size[0][1] / 2.0) + 2)
+                    coords1, coords2 = self.get_text_coordinates(joint, radius, font_size, frame.shape, label)
+
+                    cv2.rectangle(frame, (coords1[0], coords1[1] - 2), (coords2[0], coords2[1] + 2), bgColor, -1)
+                    cv2.putText(frame, label, (coords1[0], coords2[1]), self.font, self.fontsize, fgColor, 2)
+
         # write image
+        image = self.imageList[index]
         imagePath = os.path.join(self.outputImageDir, image)
+        cv2.imwrite(imagePath, frame)
 
-        # write xml/txt
+        # write xml
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
-        self.xmlParser.write_txt(self.frame.shape, self.names, self.joints, annoPath)
+        self.xmlParser.write_txt(frame.shape, self.names, self.joints, annoPath)
+
+        # write txt
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.xml')
-        self.xmlParser.write_xml(self.frame.shape, self.names, self.joints, annoPath)
+        self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
 
     def get_text_coordinates(self, joint, radius, font_size, shape, label=''):
         # y
@@ -191,8 +264,6 @@ class PoseAnnotation(object):
     def update_frame(self, x=-1, y=-1):
         self.frame = copy.copy(self.bufferFrame)
 
-        # TODO: how to deal with the invalid joints
-
         # draw links between points
         for link in self.links:
             if link[1] >= len(self.labels):
@@ -205,7 +276,10 @@ class PoseAnnotation(object):
 
             if idx0 >= 0 and idx1 >= 0:
                 joint0, joint1 = self.curJoints[idx0], self.curJoints[idx1]
-                color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(self.colors[link[0]], self.colors[link[1]])]
+                # TODO:
+                color0 = (112, 112, 112) if joint0[-1] == 0 else self.colors[link[0]]
+                color1 = (112, 112, 112) if joint1[-1] == 0 else self.colors[link[1]]
+                color = [int(0.5 * (c1 + c2)) for c1, c2 in zip(color0, color1)]
                 cv2.line(self.frame, (joint0[1], joint0[2]), (joint1[1], joint1[2]), color, 2)
 
                 center = int((joint0[1] + joint1[1]) / 2.0), int((joint0[2] + joint1[2]) / 2.0)
@@ -216,22 +290,19 @@ class PoseAnnotation(object):
                 polygon = cv2.ellipse2Poly(center, (mainAxis, subAxis), algle, 0, 360, 1)
                 cv2.fillConvexPoly(self.frame, polygon, color)
 
-        # draw_joint_points
+        # draw_joint_points and labels
         for idx, joint in enumerate(self.curJoints):
-            radius = 5
-            thickness = -1
-            if idx == self.curJointIdx: radius=20
-            cv2.circle(self.frame, (joint[1], joint[2]), radius, self.colors[idx % len(self.colors)],thickness)
-            # TODO: replace
-            # if joint[3] == 0:
-            #     cv2.rectangle(self.frame, (joint[1] - 10, joint[2] - 10), ((joint[1] + 10, joint[2] + 10)),
-            #                   self.colors[idx % len(self.colors)], 1)
+            # TODO:
+            radius = 20 if idx == self.curJointIdx else 5
+            color = (112, 112, 112) if joint[-1] == 0 else self.colors[idx % len(self.colors)]
+            cv2.circle(self.frame, (joint[1], joint[2]), radius, color,-1)
+
             if joint[0] >= 0:
                 label = str(joint[0] + 1)
                 bgColor = self.colors[idx % len(self.colors)]
                 fgColor = (0, 0, 0)
                 if joint[3] == 0:
-                    bgColor = (0, 0, 0)
+                    bgColor = (112, 112, 112)
                     fgColor = (255, 255, 255)
                 font_size = cv2.getTextSize(label, self.font, self.fontsize, 2)  # ((w,h), b)
 
@@ -281,8 +352,9 @@ class PoseAnnotation(object):
             if self.curJointIdx >= 0 and key == ord('x'):
                 label = self.curJoints[self.curJointIdx][0]
                 del self.curJoints[self.curJointIdx]
-                for idx, joint in enumerate(self.curJoints):
-                    if joint[0] > label: self.curJoints[idx][0] -= 1
+                if label >= 0:
+                    for idx, joint in enumerate(self.curJoints):
+                        if joint[0] > label: self.curJoints[idx][0] -= 1
                 self.curJointIdx = -1
             # add
             if self.curJointIdx >= 0 and key in [ord(c) for c in self.labels]:
@@ -293,38 +365,47 @@ class PoseAnnotation(object):
                 self.curJoints[self.curJointIdx][0] = self.labels.index(chr(key))
 
             # TODO: skip control
-            # import functools
-            # SC = functools.reduce(lambda x, y: x * (y[0] != -1), self.curJoints, True)
+            PCs = map(lambda x: functools.reduce(lambda x, y: x * (y[0] != -1), x[-1], len(x[-1])), self.joints)
+            PC = PCs[self.curPersonIdx] if len(PCs) else 1
+            FC = functools.reduce(lambda x, y: x * y, PCs) if len(PCs) else 1
 
             # person-level
             # switch
-            if key == 32: # blankspace
+            if key == 32 and PC > 0: # blankspace
                 if len(self.joints):
                     self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
                     self.curJoints = self.joints[self.curPersonIdx][-1] # reference
-                    print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d'%\
-                          (len(self.joints), self.curPersonIdx, self.curJointIdx)
-            if key == ord('g'): # add
+                    print 'idx: %d, total: %d, SC: %d'%(self.curPersonIdx, len(self.joints), PC)
+            if key == ord('g') and PC > 0: # add
                 self.joints.append([len(self.joints), -1, []])
-                self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
+                self.curPersonIdx = (self.curPersonIdx + 1) % (len(self.joints))
                 self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
-                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d' % \
-                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+                print 'idx: %d, total: %d' % (self.curPersonIdx, len(self.joints))
             if key == ord('h'): # delete
-                del self.joints[self.curPersonIdx]
-                self.curPersonIdx = (self.curPersonIdx - 1) % len(self.joints)
-                self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
-                print 'len(joints): %d, curPersonIdx: %d, curJointIdx: %d' % \
-                      (len(self.joints), self.curPersonIdx, self.curJointIdx)
+                if len(self.joints):
+                    del self.joints[self.curPersonIdx]
+
+                if not len(self.joints):
+                    # self.joints = []
+                    self.curPersonIdx = -1
+                    self.curJoints = []
+                else:
+                    self.curPersonIdx = (self.curPersonIdx - 1) % (len(self.joints))
+                    self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
+                print 'idx: %d, total: %d' % (self.curPersonIdx, len(self.joints))
 
             # frame-level
-            if key == ord('d'):
+            if key == ord('d') and FC > 0:
+                self.draw_static(cidx)
                 cidx = min(cidx + 1, len(self.imageList) - 1)
                 self.update(cidx)
-            if key == ord('a'):
+                print '%s' % (self.imageList[cidx])
+            if key == ord('a') and FC > 0:
+                self.draw_static(cidx)
                 cidx = max(cidx - 1, 0)
                 self.update(cidx)
-            if key == 27:
+                print '%s' % (self.imageList[cidx])
+            if key == 27 and FC > 0: # esc
                 self.draw_static(cidx)
                 break
 
