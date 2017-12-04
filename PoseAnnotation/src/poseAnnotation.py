@@ -167,6 +167,7 @@ class PoseAnnotation(object):
                 # shutil.move(srcTxtPath, self.backupAnnoDir)
         except Exception:
             self.bufferJoints = []
+        print self.bufferJoints
         self.joints = [[item[0], item[1], []] for item in self.bufferJoints]
 
         # TODO: bug bug bug
@@ -253,12 +254,12 @@ class PoseAnnotation(object):
         cv2.imwrite(imagePath, frame)
 
         # TODO: bugs bugs bugs
-        # write xml
-        annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
-        # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_auto_anno.txt')
-        self.xmlParser.write_txt(frame.shape, self.names, self.joints, annoPath)
+        # # write txt
+        # annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
+        # # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_auto_anno.txt')
+        # self.xmlParser.write_txt(frame.shape, self.names, self.joints, annoPath)
 
-        # write txt
+        # write xml
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.xml')
         # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_auto_anno.xml')
         self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
@@ -413,7 +414,7 @@ class PoseAnnotation(object):
 
             # TODO: skip control
             PC = (len(self.curJoints) == self.numJointsPerPerson)
-            FC = functools.reduce(lambda x, y: x * len(y[-1]), self.joints, 1)
+            FC = functools.reduce(lambda x, y: x * len(y[-1]) == self.numJointsPerPerson, self.joints, len(self.joints))
             # PC = 1
             # FC = 1
 
