@@ -358,7 +358,7 @@ class LabelVisual(object):
         #
         try:
             self.boxes = self.parseXml(xmlname)
-        except:
+        except Exception:
             self.boxes = []
             print('No Label!!!')
         else:
