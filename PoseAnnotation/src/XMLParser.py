@@ -30,8 +30,8 @@ class XMLParser(object):
                 x = int(object.find('joint').find('x').text)
                 y = int(object.find('joint').find('y').text)
                 status = int(object.find('status').text)
-                # curPerson[-1].append([curJointIdx, x, y, status]) # for debug
-                curPerson[-1].append([-1, x, y, status])
+                curPerson[-1].append([curJointIdx, x, y, status]) # for manual_anno
+                # curPerson[-1].append([-1, x, y, status]) # for auto_anno
             joints.append(curPerson)
         return sizes, joints
 

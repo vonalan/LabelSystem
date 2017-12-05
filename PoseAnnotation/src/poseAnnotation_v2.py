@@ -49,7 +49,7 @@ class PoseAnnotation(object):
 
         # TODO: len(self.joints) == num_persons * num_joints * len(joint_template)
         self.numJointsPerPerson = 15
-        self.joints = [] # for manual_anno
+        self.joints = [] # for mannual_anno
         self.bufferJoints = [] # for auto_anno
 
         self.curJointIdx = -1
@@ -152,30 +152,23 @@ class PoseAnnotation(object):
         self.frame = cv2.imread(imagePath)
         self.bufferFrame = copy.copy(self.frame)
 
+        # TODO: one person object only
         # auto_anno
         try:
+            # srcXmlPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.xml')
+            # _, self.bufferJoints = self.xmlParser.parse_xml(srcXmlPath)
+            # if os.path.exists(srcXmlPath):
+            #     shutil.copy(srcXmlPath, self.backupAnnoDir)
+            #     # shutil.move(srcXmlPath, self.backupAnnoDir)
+
             srcTxtPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
             _, self.bufferJoints = self.xmlParser.parse_txt_v1(srcTxtPath)
-
-            # if os.path.exists(srcTxtPath):
-            #     dstTxtPath = os.path.join(self.backupAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
-            #     # shutil.copy(srcTxtPath, dstTxtPath)
-            #     shutil.move(srcTxtPath, dstTxtPath)
+            if os.path.exists(srcTxtPath):
+                shutil.copy(srcTxtPath, self.backupAnnoDir)
+                # shutil.move(srcTxtPath, self.backupAnnoDir)
         except Exception:
             self.bufferJoints = []
-            # TODO: parse xml from inputDir
-            # try:
-            #     srcXmlPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_manual_anno.xml')
-            #     _, self.bufferJoints = self.xmlParser.parse_xml(srcXmlPath)
-            #
-            #     if os.path.exists(srcXmlPath):
-            #         dstXmlPath = os.path.join(self.backupAnnoDir, self.imageList[index][:-4] + '_manual_anno.xml')
-            #         # shutil.copy(srcXmlPath, dstXmlPath)
-            #         shutil.move(srcXmlPath, dstXmlPath)
-            # except Exception:
-            #     self.bufferJoints = []
-
-        # print self.bufferJoints
+        print self.bufferJoints
         self.joints = [[item[0], item[1], []] for item in self.bufferJoints]
 
         # TODO: bug bug bug
@@ -183,7 +176,9 @@ class PoseAnnotation(object):
             self.curPersonIdx = 0
             self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
             self.curJoints = self.joints[self.curPersonIdx][-1]
+            # print self.curBufferJoints
         else:
+            # self.joints = []
             self.curPersonIdx = -1
             self.curBufferJoints = []
             self.curJoints = []
@@ -267,11 +262,8 @@ class PoseAnnotation(object):
 
         # write xml
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.xml')
+        # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_auto_anno.xml')
         self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
-
-        # TODO: write back inputdir
-        # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_manual_anno.xml')
-        # self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
 
     def get_text_coordinates(self, joint, radius, font_size, shape, label=''):
         # y
@@ -305,7 +297,7 @@ class PoseAnnotation(object):
             color = self.colors[idx % len(self.colors)]
             cv2.circle(self.frame, (joint[1], joint[2]), radius, color, -1)
 
-        # step 2 manual_anno
+        # step 2 mannual_anno
         # draw links between points
         for link in self.links:
             if link[1] >= len(self.labels):
@@ -424,40 +416,46 @@ class PoseAnnotation(object):
             # TODO: skip control
             PC = (len(self.curJoints) == self.numJointsPerPerson)
             FC = functools.reduce(lambda x, y: x * len(y[-1]) == self.numJointsPerPerson, self.joints, len(self.joints))
-            PC = 1
-            FC = 1
+            # PC = 1
+            # FC = 1
 
             # person-level
             # switch
             if key == ord(' ') and PC: # blankspace
-                if len(self.joints):
-                    self.curPersonIdx = (self.curPersonIdx + 1) % len(self.joints)
-                    # self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1] # reference
-                    self.curJoints = self.joints[self.curPersonIdx][-1] # reference
-                    # print 'idx: %d, total: %d, SC: %d'%(self.curPersonIdx, len(self.joints), PC)
+                # assert len(self.joints) == len(self.bufferJoints)
+                if len(self.bufferJoints):
+                    self.curPersonIdx = (self.curPersonIdx + 1) % len(self.bufferJoints)
+                    self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1] # reference
+                    self.curJoints = self.joints[self.curPersonIdx][-1]
+                    print 'idx: %d, total: %d, SC: %d'%(self.curPersonIdx, len(self.joints), PC)
                     # print self.joints
+                # assert len(self.joints) == len(self.bufferJoints)
             if key == ord('g') and PC: # add
-                # self.bufferJoints.append([len(self.bufferJoints), -1, []])
+                # assert len(self.joints) == len(self.bufferJoints)
+                self.bufferJoints.append([len(self.bufferJoints), -1, []])
                 self.joints.append([len(self.joints), -1, []])
-                self.curPersonIdx = (self.curPersonIdx + 1) % (len(self.joints))
-                # self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
+                self.curPersonIdx = (self.curPersonIdx + 1) % (len(self.bufferJoints))
+                self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
                 self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
-                # print 'idx: %d, total: %d' % (self.curPersonIdx, len(self.joints))
+                print 'idx: %d, total: %d' % (self.curPersonIdx, len(self.joints))
+                # assert len(self.joints) == len(self.bufferJoints)
             if key == ord('h'): # delete
-                if len(self.joints):
-                    # del self.bufferJoints[self.curPersonIdx]
+                # assert len(self.joints) == len(self.bufferJoints)
+                if len(self.bufferJoints):
+                    del self.bufferJoints[self.curPersonIdx]
                     del self.joints[self.curPersonIdx]
-                if not len(self.joints):
+                if not len(self.bufferJoints):
                     # self.bufferJoints = []
                     # self.joints = []
                     self.curPersonIdx = -1
-                    # self.curBufferJoints = []
+                    self.curBufferJoints = []
                     self.curJoints = []
                 else:
-                    self.curPersonIdx = (self.curPersonIdx - 1) % (len(self.joints))
-                    # self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
+                    self.curPersonIdx = (self.curPersonIdx - 1) % (len(self.bufferJoints))
+                    self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
                     self.curJoints = self.joints[self.curPersonIdx][-1]  # reference
                 print 'idx: %d, total: %d' % (self.curPersonIdx, len(self.joints))
+                # assert len(self.joints) == len(self.bufferJoints)
 
             # frame-level
             if key == ord('d') and FC:
