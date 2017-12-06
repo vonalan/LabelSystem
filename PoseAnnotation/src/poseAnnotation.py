@@ -424,8 +424,8 @@ class PoseAnnotation(object):
             # TODO: skip control
             PC = (len(self.curJoints) == self.numJointsPerPerson)
             FC = functools.reduce(lambda x, y: x * len(y[-1]) == self.numJointsPerPerson, self.joints, len(self.joints))
-            PC = 1
-            FC = 1
+            # PC = 1
+            # FC = 1
 
             # person-level
             # switch
