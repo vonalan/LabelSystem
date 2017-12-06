@@ -152,36 +152,40 @@ class PoseAnnotation(object):
         self.frame = cv2.imread(imagePath)
         self.bufferFrame = copy.copy(self.frame)
 
-        srcTxtPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
-        srcXmlPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_manual_anno.xml')
-
-        if os.path.exists(srcTxtPath):
-            '''only one person object'''
+        # auto_anno
+        try:
+            srcTxtPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
             _, self.bufferJoints = self.xmlParser.parse_txt_v1(srcTxtPath)
-            self.joints = [[item[0], item[1], []] for item in self.bufferJoints]
-            dstTxtPath = os.path.join(self.backupAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
-            # # shutil.copy(srcTxtPath, dstTxtPath)
-            shutil.move(srcTxtPath, dstTxtPath)
-        elif os.path.exists(srcXmlPath):
-            '''multiple person objects'''
+
+            # if os.path.exists(srcTxtPath):
+            #     dstTxtPath = os.path.join(self.backupAnnoDir, self.imageList[index][:-4] + '_auto_anno.txt')
+            #     # shutil.copy(srcTxtPath, dstTxtPath)
+            #     shutil.move(srcTxtPath, dstTxtPath)
+        except Exception:
             self.bufferJoints = []
-            _, self.joints = self.xmlParser.parse_xml(srcXmlPath)
-        else:
-            '''invalid files'''
-            self.bufferJoints = []
-            self.joints = [[item[0], item[1], []] for item in self.bufferJoints]
+            # TODO: parse xml from inputDir
+            # try:
+            #     srcXmlPath = os.path.join(self.inputAnnoDir, self.imageList[index][:-4] + '_manual_anno.xml')
+            #     _, self.bufferJoints = self.xmlParser.parse_xml(srcXmlPath)
+            #
+            #     if os.path.exists(srcXmlPath):
+            #         dstXmlPath = os.path.join(self.backupAnnoDir, self.imageList[index][:-4] + '_manual_anno.xml')
+            #         # shutil.copy(srcXmlPath, dstXmlPath)
+            #         shutil.move(srcXmlPath, dstXmlPath)
+            # except Exception:
+            #     self.bufferJoints = []
+
+        # print self.bufferJoints
+        self.joints = [[item[0], item[1], []] for item in self.bufferJoints]
 
         # TODO: bug bug bug
         if len(self.bufferJoints):
-            self.curBufferJoints = self.bufferJoints[0][-1]
-        else:
-            self.curBufferJoints = []
-
-        if len(self.joints):
             self.curPersonIdx = 0
+            self.curBufferJoints = self.bufferJoints[self.curPersonIdx][-1]
             self.curJoints = self.joints[self.curPersonIdx][-1]
         else:
             self.curPersonIdx = -1
+            self.curBufferJoints = []
             self.curJoints = []
 
     def update_matte(self):
@@ -256,16 +260,18 @@ class PoseAnnotation(object):
         cv2.imwrite(imagePath, frame)
 
         # TODO: bugs bugs bugs
-        # # write txts
+        # # write txt
         # annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.txt')
         # # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_auto_anno.txt')
         # self.xmlParser.write_txt(frame.shape, self.names, self.joints, annoPath)
 
-        # write xmls
+        # write xml
         annoPath = os.path.join(self.outputAnnoDir, image[:-4] + '_manual_anno.xml')
         self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
-        annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_manual_anno.xml')
-        self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
+
+        # TODO: write back inputdir
+        # annoPath = os.path.join(self.inputAnnoDir, image[:-4] + '_manual_anno.xml')
+        # self.xmlParser.write_xml(frame.shape, self.names, self.joints, annoPath)
 
     def get_text_coordinates(self, joint, radius, font_size, shape, label=''):
         # y
