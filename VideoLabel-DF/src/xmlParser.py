@@ -84,9 +84,9 @@ if __name__ == '__main__':
     template_object = './template_object.xml'
     parser = XMLParser(template_prefix, template_object)
 
-    image_dir = r'E:\Backups\Datasets\alphamatting.com\LD\input_training_lowres'
-    xml_dir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_training_lowres\xmls'
-    txt_dir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_training_lowres\txts'
+    image_dir = r'E:\Backups\Datasets\alphamatting.com\LD\input_test_lowres'
+    xml_dir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_test_lowres\xmls'
+    txt_dir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_test_lowres\txts'
 
     for image_name in os.listdir(image_dir):
         # image_path = os.path.join(image_dir, image_name)
