@@ -17,7 +17,7 @@ class ImageLabel(object):
         self.boxes = []
         self.bufferBoxes = []
 
-        # TODO: i =  ax + by + z, b = [0:4], c = [0:4], then i = 12cx + 3cy + cz
+        # TODO: i =  ax + by + cz, b = [0:4], c = [0:4], then i = 12cx + 3cy + cz
         self.alpha = None
         self.curBoxIdx = -1
         self.curVertexIdx = -1
