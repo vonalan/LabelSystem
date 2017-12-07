@@ -476,9 +476,9 @@ class VideoLabel(object):
                 if self.chooseRect >= 0:
                     self.labelRect = self.chooseRect
                     self.rightClick = 1
-                    # elif event == cv2.EVENT_RBUTTONUP:
-                    # key = cv2.waitKey()
-                    # cv2.putText(self.frame, chr(key), self.rects[self.chooseRect][0], cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,255), 3)
+            # elif event == cv2.EVENT_RBUTTONUP:
+            # key = cv2.waitKey()
+            # cv2.putText(self.frame, chr(key), self.rects[self.chooseRect][0], cv2.FONT_HERSHEY_SIMPLEX, 1,(0,0,255), 3)
 
     def labelling(self):
         import time
