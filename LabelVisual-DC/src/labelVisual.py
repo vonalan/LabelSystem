@@ -276,7 +276,7 @@ class labelVisual:
     def visual(self, imgDir, xmlDir, logname):
         '''有些图片只能显示一部分，需要设置自适应窗口'''
         cv2.namedWindow('image')
-        cv2.setMouseCallback("image", self.events)
+        # cv2.setMouseCallback("image", self.events)
 
         nameList = os.listdir(imgDir)
         # nameList = sorted(nameList, key=lambda x: int((x.split('.')[1]).split('_')[1]))
@@ -337,6 +337,7 @@ class labelVisual:
             while True:
                 cv2.imshow("image", self.frame)
                 key = cv2.waitKey(20)
+                cv2.setMouseCallback("image", self.events)
 
                 if key in [ord(label) for label in self.labels]:
                     # print str(self.labels.index(chr(key)) + 1)

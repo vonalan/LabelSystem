@@ -384,12 +384,12 @@ class PoseAnnotation(object):
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL)
         # cv2.setMouseCallback('image', self.call_back_func) #binding the call_back_func
         while True:
-            # important
-            cv2.setMouseCallback('image', self.call_back_func) # rebinding the call_back_func
-            key = cv2.waitKey(20)
+            cv2.setMouseCallback('image', self.call_back_func)  # rebinding the call_back_func
 
             cv2.imshow('image', self.frame)
             # cv2.imshow('matte', self.matte)
+
+            key = cv2.waitKey(20)
 
             # joint-level
             # delete

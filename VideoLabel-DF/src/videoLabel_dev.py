@@ -2,6 +2,7 @@
 
 import os
 import sys
+import copy
 
 import numpy as np
 import cv2
@@ -23,8 +24,11 @@ class ImageLabel(object):
         self.curVertexIdx = -1
         self.curEdgeIdx = -1
 
-    def update(self, image_list, idx):
-        pass
+    def update(self, image_dir, image_list, idx):
+        image_path = os.path.join(image_dir, image_list[idx])
+        self.frame = cv2.imread(image_path)
+        # self.bufferFrame = copy.deepcopy(self.frame)
+        print self.frame.shape
 
     def update_alpha(self):
         pass
@@ -35,9 +39,29 @@ class ImageLabel(object):
     def call_back_func(self):
         pass
 
-    def label(self, image_dir):
+    def label(self, image_dir, xml_dir):
         image_list = os.listdir(image_dir)
-        self.update(image_list, 0)
+        xml_list = os.listdir(xml_dir)
+        image_list = [img for img in image_list if img not in xml_list]
+        if not len(image_list): return 0
+        print image_list
+
+        self.update(image_dir, image_list, 0)
+        self.update_alpha()
+        self.update_frame()
+
+        cv2.namedWindow('image', cv2.WINDOW_AUTOSIZE)
+        while True:
+            # cv2.setMouseCallback('image', self.call_back_func())
+
+            cv2.imshow('image', self.frame)
+            # cv2.imshow('alpha', self.alpha)
+
+            key = cv2.waitKey(0)
+
+            if key == 27:
+                break
+        cv2.destroyAllWindows()
 
 class VideoLabel(object):
     def __init__(self):
@@ -51,4 +75,4 @@ def main():
     pass
 
 if __name__ == '__main__':
-    pass
+    ImageLabel().label(r'../../PoseAnnotation/inputs/images/', r'../../PoseAnnotation/inputs/')

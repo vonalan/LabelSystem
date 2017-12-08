@@ -635,9 +635,13 @@ class VideoLabel(object):
 
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
         # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
-        cv2.setMouseCallback("image", self.draw_rect)
+        # cv2.setMouseCallback("image", self.draw_rect) # binding
         while True:
+            cv2.setMouseCallback("image", self.draw_rect)  # rebinding
+
             cv2.imshow("image", self.frame)
+            # cv2.imshow('alpha', self.boxImg)
+
             key = cv2.waitKey(20)
 
             self.SC = reduce(lambda x, y: x * y, [len(box.label) for box in self.boxes], 1)
@@ -665,6 +669,7 @@ class VideoLabel(object):
                     self.draw_static(self.name, self.frame, self.shape, key, self.boxes)
                     # print([box.label for box in self.boxes])
 
+            # TODO: REMOVE
             if key == ord('h'): # 回退30帧
                 if self.DC == 0 and self.SC > 0:
                     if sidx > 0:
@@ -687,6 +692,7 @@ class VideoLabel(object):
 
                     self.DC = 1
 
+            # TODO: REMOVE
             if key == ord('g'): # 前进30帧
                 if self.AC == 0 and self.SC > 0:
                     if eidx < len(self.storerects):

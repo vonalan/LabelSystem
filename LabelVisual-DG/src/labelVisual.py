@@ -653,9 +653,12 @@ class LabelVisual(object):
 
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
         # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
-        cv2.setMouseCallback("image", self.draw_rect)
+        # cv2.setMouseCallback("image", self.draw_rect)
         while True:
+            cv2.setMouseCallback("image", self.draw_rect)  # rebind after closing the window
+
             cv2.imshow("image", self.frame)
+            # cv2.imshow('alpha', self.boxImg)
             key = cv2.waitKey(20)
 
             if key == ord('x'): # delete bbox
