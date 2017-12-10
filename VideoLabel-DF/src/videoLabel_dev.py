@@ -10,6 +10,12 @@ import cv2
 bbox = [-1, [[-1,-1], [-1, -1]]]
 boxes = bbox * 3
 
+class Parser():
+    pass
+
+class Extractor():
+    pass
+
 class ImageLabel(object):
     def __init__(self):
         self.frame = None

@@ -250,6 +250,7 @@ class VideoLabel(object):
 
         imgname = os.path.join(self.imgDir, self.name)
         self.frame = cv2.imread(imgname)
+        # self.bufframe = self.frame
         self.bufframe = copy.deepcopy(self.frame)
         self.shape = self.frame.shape
         self.chooseRect = -1
@@ -311,6 +312,7 @@ class VideoLabel(object):
         ''''''
         if scale is not None:
             objshape = map(lambda x: int(x * scale), orishape)
+            objshape = map(lambda x: int(x * scale), orishape)
             resizeFrame = cv2.resize(frame, tuple(reversed(objshape)), interpolation=cv2.INTER_CUBIC)
             return scale, resizeFrame
         ''''''
@@ -357,14 +359,16 @@ class VideoLabel(object):
 
     def _extract_frame_(self, factor=6):
         if os.path.exists(self.extractDoneLog):
-            rf = open(self.extractDoneLog)
-            line = [line for line in rf][0]
-            rf.close()
-            if int(line) == len(os.listdir(self.imgDir)):
-                print u'图片已经提取过啦^_^'
-                return
-            else:
-                print u'图片文件夹不完整，重新提取图片-_-'
+            # TODO: REMOVE
+            # rf = open(self.extractDoneLog)
+            # line = [line for line in rf][0]
+            # rf.close()
+            # if int(line) == len(os.listdir(self.imgDir)):
+            #     print u'图片已经提取过啦^_^'
+            #     return
+            # else:
+            #     print u'图片文件夹不完整，重新提取图片-_-'
+            return
 
         videoPath = os.path.join(self.inputDir, self.video)
         cap = cv2.VideoCapture(videoPath)
@@ -539,8 +543,6 @@ class VideoLabel(object):
         self.startPos[1] = y
         self.boxes[self.chooseRect].rect[self.selectedX][0] = x
         self.boxes[self.chooseRect].rect[self.selectedY][1] = y
-
-
         # print self.boxes[self.chooseRect], self.shape, (x,y)
 
     def draw_rect(self, event, x, y, flags, param):
@@ -632,6 +634,7 @@ class VideoLabel(object):
         sidx, eidx, cidx = -self.length, 0, 0
 
         self.update(0)
+        self.update_boxImg()
 
         cv2.namedWindow('image', flags=cv2.WINDOW_NORMAL) # 可以调整窗口大小，但有时候会造成OpenCV卡顿
         # cv2.namedWindow('image', flags=cv2.WINDOW_AUTOSIZE) # 自适应图片大小，不可以调整窗口大小
