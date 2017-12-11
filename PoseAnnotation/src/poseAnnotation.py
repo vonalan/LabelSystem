@@ -66,6 +66,8 @@ class PoseAnnotation(object):
 
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.fontsize = 0.75
+        self.hRadius = 20
+        self.lRadius = 5
 
         self.inputsDir = inputsDir
         self.outputDir = outputDir
@@ -230,7 +232,8 @@ class PoseAnnotation(object):
             for idx, joint in enumerate(curJoints):
                 if joint[-1] >= 0:
                     # TODO:
-                    radius = 20 if idx == self.curJointIdx else 5
+                    # radius = 20 if idx == self.curJointIdx else 5
+                    radius = self.hRadius if idx == self.curJointIdx else self.lRadius
                     color = (112, 112, 112) if joint[-1] == 0 else self.colors[idx % len(self.colors)]
                     cv2.circle(frame, (joint[1], joint[2]), radius, color, -1)
 
@@ -331,7 +334,8 @@ class PoseAnnotation(object):
         for idx, joint in enumerate(self.curJoints):
             if joint[-1] >=0:
                 # TODO:
-                radius = 20 if idx == self.curJointIdx else 5
+                # radius = 20 if idx == self.curJointIdx else 5
+                radius = self.hRadius if idx == self.curJointIdx else self.lRadius
                 color = (112, 112, 112) if joint[-1] == 0 else self.colors[idx % len(self.colors)]
                 cv2.circle(self.frame, (joint[1], joint[2]), radius, color,-1)
 
