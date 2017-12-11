@@ -368,6 +368,7 @@ class VideoLabel(object):
             #     return
             # else:
             #     print u'图片文件夹不完整，重新提取图片-_-'
+            print u'图片已经提取过啦^_^'
             return
 
         videoPath = os.path.join(self.inputDir, self.video)
