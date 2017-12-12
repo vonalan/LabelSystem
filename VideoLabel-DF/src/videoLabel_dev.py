@@ -27,8 +27,10 @@ class ImageLabel(object):
         # TODO: i =  ax + by + cz, b = [0:4], c = [0:4], then i = 12cx + 3cy + cz
         self.alpha = None
         self.curBoxIdx = -1
-        self.curVertexIdx = -1
-        self.curEdgeIdx = -1
+        # self.curVertexIdx = -1
+        # self.curEdgeIdx = -1
+        self.xIdx = -1
+        self.yIdx = -1
 
     def update(self, image_dir, image_list, idx):
         image_path = os.path.join(image_dir, image_list[idx])
