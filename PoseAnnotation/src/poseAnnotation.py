@@ -471,6 +471,14 @@ class PoseAnnotation(object):
                 cidx = max(cidx - 1, 0)
                 self.update(cidx)
                 print '%s' % (self.imageList[cidx])
+
+            # TODO:
+            if key == ord('q'):
+                pass
+            if key == ord('e'):
+                pass
+            # TODO:
+
             if key == 27 and FC: # esc
                 self.draw_static(cidx)
                 break

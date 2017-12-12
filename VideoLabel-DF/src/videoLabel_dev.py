@@ -37,7 +37,26 @@ class ImageLabel(object):
         print self.frame.shape
 
     def update_alpha(self):
-        pass
+        self.alpha = np.zeros(self.frame.shape[:2])
+        for i, box in enumerate(self.boxes):
+            # rect
+            rect = box[-1]
+            pt1 = rect[0]
+            pt2 = rect[2]
+            color = i * 128
+            thick = 3
+            cv2.rectangle(self.alpha, pt1, pt2, color, thickness=thick)
+
+            # vertex
+            for x in [pt1[0], pt2[0]]:
+                for y in [pt1[1], pt2[1]]:
+                    center = (x,y)
+                    radius = 5
+                    color = i * 128 + 1
+                    thick = 1
+                    cv2.circle(self.frame, center, radius, color, thickness=thick)
+
+            # TODO: EADGE
 
     def update_frame(self):
         pass

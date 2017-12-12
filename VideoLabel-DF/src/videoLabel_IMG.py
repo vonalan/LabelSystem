@@ -12,6 +12,7 @@ import random
 import matplotlib.pyplot as plt
 from collections import deque
 
+# TODO: REMOVE
 class BBox(object):
     def __init__(self):
         # self.id = -1
@@ -47,6 +48,7 @@ class BBox(object):
     def get_points(self):
         pass
 
+# TODO: REMOVE
 class FrameInfo(object):
     def __init__(self, name):
         self.name = name
@@ -88,6 +90,8 @@ class VideoLabel(object):
 
         self.nameList = []
         self.storerects = []
+
+        # TODO: ADD FINGERPRINT FOR BBOX
 
         self.rectFlag = 0 # 0，自由；1，画框，2，移动框, 3, 移动角
         self.chooseRect = -1
@@ -154,6 +158,7 @@ class VideoLabel(object):
         self.extractDoneLog = os.path.join(self.outputDir, video, 'extractFrameDone.log')
         # self.labelDoneLog = os.path.join(self.outputDir, video, 'labellingDone.log')
 
+    # TODO: REMOVE FROM THIS FILE
     # 输出xml方法，
     def writeXML(self, shape, names, boxes, outname):
         '''
@@ -255,6 +260,7 @@ class VideoLabel(object):
         self.shape = self.frame.shape
         self.chooseRect = -1
 
+    # TODO: REMOVE
     def update_storerects(self, sidx, eidx, step=1):
         sboxes = self.storerects[sidx].boxes
         eboxes = self.storerects[eidx].boxes
@@ -659,6 +665,7 @@ class VideoLabel(object):
                     self.update_boxImg()
                     self.update_frame()
 
+            # TODO: PUT LABEL IN TETX BOX
             if key in [ord(label) for label in self.labels]: # add label
                 if len(self.boxes) and self.chooseRect >= 0:
                     self.boxes[self.chooseRect].label = str(self.labels.index(chr(key)) + 1)
