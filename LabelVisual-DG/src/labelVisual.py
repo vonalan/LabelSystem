@@ -710,8 +710,8 @@ if __name__ == '__main__':
     指定相应的地址。
     标注完后只需要xmlDir里面的文件。
     '''
-    imgDir = r'E:\Backups\Datasets\alphamatting.com\LD\input_test_lowres'    # images地址
-    xmlDir = r'E:\Backups\Datasets\alphamatting.com\LD\boxes_test_lowres\xmls'    # xmls地址
+    imgDir = r'../images'    # images地址
+    xmlDir = r'../xmls'    # xmls地址
     dbgDir = r'../dbgs/'    # 修改xml之后图片的效果（用来快速检查错误）
     bakDir = r'../baks/'     # xmls备份地址（出现错误后恢复）
 

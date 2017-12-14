@@ -375,11 +375,13 @@ class labelVisual:
 
 
 if __name__ == '__main__':
-    imgdir = r'F:\Users\Kingdom\Desktop\VideoLabel-DF\outputs\imgs' # 图片文件夹地址
-    xmldir = r'F:\Users\Kingdom\Desktop\VideoLabel-DF\outputs\xmls' # xml文件夹地址
+    imgdir = r'../images/' # 图片文件夹地址
+    xmldir = r'../xmls/' # xml文件夹地址
     prefix_template = 'template_prefix.xml'
     object_template = 'template_object.xml'
     logname = r'./visual.log' # ！！！当一个文件夹首次被标注时，记得设为-2
-    labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
+    # labelVisual(imgdir, xmldir, prefix_template, object_template, logname)
+    raise Exception(r'这个版本不再维护，请使用功能更强大的LabelVisual-DG！！！')
+
 
 
