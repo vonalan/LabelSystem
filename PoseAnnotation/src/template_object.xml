@@ -1,0 +1,11 @@
+        <object>
+            <name>$name$</name>
+            <pose>Unspecified</pose>
+            <truncated>0</truncated>
+            <difficult>0</difficult>
+            <status>$status$</status>
+            <joint>
+                <x>$x$</x>
+                <y>$y$</y>
+            </joint>
+        </object>

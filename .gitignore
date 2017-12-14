@@ -1,8 +1,8 @@
 *.zip
-*.avi
-*.mp4
+# *.avi
+# *.mp4
 *.exe
-*.jpg
-*.png
-*.xml
+# *.jpg
+# *.png
+# *.xml
 *.pyc
